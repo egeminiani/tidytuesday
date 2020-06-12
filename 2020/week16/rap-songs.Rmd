@@ -1,0 +1,802 @@
+---
+title: "Best Hip Hop songs of all time"
+output:
+  rmdformats::html_docco:
+    thumbnails: false
+    lightbox: true
+    gallery: true
+    highlight: tango
+    code_folding: hide    
+editor_options: 
+  chunk_output_type: console
+---
+<center>
+<img style="width: 280px;" src="Images/bbcmusic2.png">
+</center>
+
+<style>
+body {
+  text-align: justify;
+  <!-- background-color: #F1EBE4; -->
+}
+.page p {
+  color: #000000;
+}
+img {
+  display: block;
+  margint: auto;
+}
+code {
+  color: #236e51
+}
+.citation {
+  color: #4745de
+}
+a {
+  color: #4745de
+}
+</style>
+
+```{r setup, include=FALSE}
+library(knitr)
+library(rmdformats)
+library(kableExtra)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE, dpi = 400)
+load(here::here("2020", "week16", "Workspace", "workspace.RData"))
+source(here::here("2020", "week16", "setToken.R"), encoding = "UTF-8")
+access_token <- spotifyr::get_spotify_access_token()
+```
+
+# Introduction {.tabset .tabset-pills}
+
+Earlier this year, BBC Music asked more than 100 critics, artists, and other music industry experts for their five favorite hip-hop tracks. The complete poll results together with 
+information about the voters are available at the [#tidytuesday Github repository](https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-04-14).
+
+Let us explore the data sets, see which are the most rated songs, and which song characteristics are associated with high critic scores. We start by loading the packages and some functions required for the analysis.
+
+```{r packages}
+library(tidyverse)
+require(maps)
+library(here)
+library(pdftools)
+library(scales)
+library(treemapify)
+library(spotifyr)
+library(ggimage)
+library(ggcorrplot)
+library(tidytext)
+library(nFactors)
+library(psych)
+library(cowplot)
+library(ggrepel)
+library(RColorBrewer)
+
+# Define a custom theme for this project
+library(showtext)
+font_add_google("Montaga", "Montaga")
+showtext_auto()
+# trace(grDevices::png, exit = quote({
+#    showtext::showtext_begin()
+# }), print = FALSE)
+# untrace(grDevices::png)
+
+mygray <- "#F8F7FF"
+cols   <- c("#404664", "#726CC6", "#AAA7DD", "#D3D3EE", "#FBE8DA")
+theme_set(theme_light())
+theme_update(text = element_text(color = "black", family = "Montaga"),
+        panel.grid = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_rect(fill = mygray),
+        plot.background = element_rect(fill = mygray),
+        strip.background = element_rect(fill = mygray),
+        plot.title = element_text(size = 30), 
+        plot.subtitle = element_text(size = 18),
+        plot.caption = element_text(size = 13),
+        axis.text = element_text(size = 18),
+        axis.title = element_text(size = 22),
+        axis.ticks = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_text(size = 20),
+        legend.text = element_text(size=15),
+        legend.background = element_blank(),
+        legend.box.background = element_blank(),
+        strip.text = element_text(size = 17),
+        strip.text.x = element_text(colour = "black"))
+
+show_table <- function(x, caption = "", head = 50, scroll = FALSE, full.width = FALSE, 
+                       digits = 2, col.names = NA, align = NULL){
+  table <- x %>%
+    head(head) %>%
+    kable(caption = caption, digits = digits, col.names = col.names, align = align,
+          format.args = list(decimal.mark = ".", big.mark = "")) %>%
+    kable_styling("striped", position = "left", full_width = full.width)
+    if(scroll){
+      table <- table %>%
+        scroll_box(width = "100%", height = "500px")
+    }
+  return(table)
+}
+
+firstup <- function(x) {
+  substr(x, 1, 1) <- toupper(substr(x, 1, 1))
+  x
+}
+
+frequency_table <- function(df, group_var, align = NULL, prop = TRUE, 
+                            head = nrow(df), caption = ""){
+
+  group_var <- enquo(group_var)
+  col.names <- c(firstup(as_label(group_var)), "Frequency")
+
+  table <- df %>%
+    group_by(!! group_var) %>%
+    summarize(n = n()) %>%
+    arrange(desc(n))
+
+  if(prop){
+    col.names <- c(col.names, "Proportion")
+    table <- table %>%
+      mutate(prop = n / sum(n),
+             prop = percent(prop))
+  }
+
+  table %>%
+    show_table(col.names = col.names, align = align, head = head, caption = caption)
+}
+```
+
+The available data sets are `polls.csv` and `rankings.csv`. Let us have a look at these data sets.
+
+```{r read_data}
+polls <- read_delim('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-14/polls.csv', delim = ",") %>%
+  select(rank : critic_country) %>%
+  mutate_if(is.double, as.integer) %>%
+  mutate(gender = as.factor(gender))
+
+rankings <- read_delim('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-14/rankings.csv', delim = ",") %>%
+  mutate_if(is.double, as.integer)
+```
+
+## Polls
+
+The `polls` data set gathers information about the voters (that is, name, occupation, and country of origin), the five songs titles from most to least favorite, the singers’ names and gender, and the release years of the songs.
+
+```{r polls_table}
+polls %>%
+  show_table(head = 20, align = c(rep("l", 3), rep("r", 5)), scroll = TRUE,
+             caption = "Polls data set (first 20 rows)")
+```
+
+## Rankings
+
+For each song, the `rankings` data set reports some metadata, including the name of the artist(s), the release year, and how many voters picked it among their favorites. The `points` variable gives each song a total score that takes into account where the song is positioned in the voters' rankings. More specifically, each track is awarded ten points if it ranks first, eight points if it ranks second, and so on down to two points for fifth place.
+
+```{r rankings_table}
+rankings %>%
+  show_table(head = 20, align = c(rep("l", 3), rep("r", 5)), scroll = TRUE,
+             caption = "Rankings data set (first 20 rows)")
+```
+
+# Exploratory Analysis
+
+Before delving into the Hip Hop songs, let's have a look at the voters first. The voters come from 13 countries across the six  continents: North America, South America, Europe, Africa, Asia, and Australia. BBC Music mostly contacted voters coming from the United States, probably because that is the area where the hip hop musical genre culturally originated.
+
+```{r countries_table}
+df_countries <- polls %>%
+  distinct(critic_name, .keep_all = TRUE) %>%
+  count(critic_country, sort = TRUE) %>%
+  rename(region = critic_country) %>%
+  mutate(region = ifelse(region == "Russian Federation", "Russia", region),
+         region = ifelse(region == "US", "USA", region))
+
+df_countries %>%
+  show_table(col.names = c("Country", "Frequency"), align = c("l", "r"),
+             caption = "Distribution of voters across countries")
+```
+
+
+```{r map_ggplot2}
+map.world_joined <- map_data("world") %>%
+  left_join(df_countries, by = "region")
+
+region.lab.data <- map.world_joined %>%
+  filter(!is.na(n)) %>%
+  group_by(region) %>%
+  summarise(long = mean(long), lat = mean(lat))
+
+plot.map <- map.world_joined %>%
+  mutate(n = ifelse(is.na(n), FALSE, TRUE)) %>%
+  ggplot(aes(long, lat)) +
+  geom_polygon(aes(group = group, fill = n), show.legend = FALSE) +
+  geom_text(aes(label = region), data = region.lab.data, size = 6.5, family = "Montaga") +
+  scale_fill_manual(name = "Frequency", values = c("gray70", "#F26989")) +
+  labs(title = "Voters' countries of origin", x = NULL, y = NULL,
+       subtitle = "Almost 70% of voters come from the United States.",
+       caption = "source: BBC Music, TidyTuesday 2020|week 16") +
+  theme(axis.text = element_blank()) 
+
+ggsave(here("2020", "week16", "Plots", "Critics_map.pdf"), plot = plot.map,
+       width = 11, height = 7, device = cairo_pdf) 
+
+png <- pdf_convert(here("2020", "week16", "Plots", "Critics_map.pdf"), dpi = 400,
+                   filenames = here("2020", "week16", "Plots", "Critics_map.png"),
+                   verbose = FALSE)
+```
+
+```{r echo=FALSE, out.width=800}
+include_graphics(here("2020", "week16", "Plots", "Critics_map.png"))
+```
+
+Fifty of the 107 voters are music critics; the occupations of the other voters are shown in the treemap below.
+
+```{r treemap}
+plot.roles <- polls %>%
+  distinct(critic_name, .keep_all = TRUE) %>%
+  count(critic_rols, sort = TRUE) %>%
+  slice(-1) %>%
+  ggplot(aes(area = n, label = critic_rols, fill = n)) +
+  geom_treemap(alpha = 0.6) +
+  geom_treemap_text(place = "centre", size = 20, min.size = 13,
+                    grow = FALSE, reflow = TRUE, family = "Montaga") +
+  scale_fill_gradientn(colors = rev(c("#404664", "#726CC6", "#AAA7DD", "#D3D3EE")),
+                       name = "Frequency\n",
+                       guide = guide_colorbar(label = TRUE, frame.colour = "black",
+                                              label.position = "bottom", barwidth = 8,
+                                              barheight = 1, direction = 'horizontal')) +
+  labs(title = "Voters' Occupations",
+       subtitle = "Excluding the 'Critic' role, which makes up for half of the whole jobs (50 out of 107).",
+       caption = "source: BBC Music, TidyTuesday 2020|week 16") +
+  theme(plot.background = element_rect(fill = NA))
+
+ggsave(here("2020", "week16", "Plots", "Critics_roles.pdf"), plot = plot.roles,
+       width = 12, height = 10, device = cairo_pdf) 
+
+png <- pdf_convert(here("2020", "week16", "Plots", "Critics_roles.pdf"), dpi = 400,
+                   filenames = here("2020", "week16", "Plots", "Critics_roles.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=600}
+include_graphics(here("2020", "week16", "Plots", "Critics_roles.png"))
+```
+
+Now that we have inspected the critics, let's have a look at the songs and the singers. Most Hip Hop artists are male. Female artists and featured collaborations come almost in a tie, and account jointly for about 20% of the greatest songs.
+
+```{r plot_gender}
+polls %>%
+  distinct(artist, .keep_all = TRUE) %>%
+  frequency_table(gender, align = c("l", "r", "r"),
+                  caption = "The gender of the best Hip Hop artists according to the BBC Music poll")
+```
+
+The best Hip Hop songs were released in the last 30 years. The oldest song is "Rapper's Delight" by the Sugarhill Gang, and it is dated back to 1979. While it was not the first single to include rapping, "Rapper's Delight" is credited for [introducing hip hop music to a wide audience](https://en.wikipedia.org/wiki/Rapper%27s_Delight). By 1979 hip hop music had become a mainstream genre. The most rated songs were released from the early to the late Nineties. This period is considered the [Golden Age of Hip Hop](https://en.wikipedia.org/wiki/Hip_hop_music#1986%E2%80%931997:_Golden_age_hip_hop).
+
+```{r year}
+text.color <- "#46494c"
+df_shades <- data.frame(xmin = c(-Inf, 1983, 1986, 1997, 2006, 2014),
+                        xmax = c(1983, 1986, 1997, 2006, 2014, Inf),
+                        ymin = rep(0, 6), 
+                        ymax = rep(Inf, 6),
+                        fill = rep(c("#ABA7DD", "#F9DEC9"), times = 3))
+
+df_text <- data.frame(x = c(1980.5, 1984.5, 1991.5, 2001.5, 2010, 2017),
+                      y = c(20, 20, 20.7, 20.7, 20, 20),
+                      label = c("Old\nSchool", "New\nSchool", "Golden Age", "Bling Era",
+                                "Alternative\nand Electronic", "Trap and\nMumble Rap"))
+
+plot.hiphop.periods <- polls %>%
+  distinct(title, .keep_all = TRUE) %>%
+  count(year) %>%
+  ggplot(aes(year, n)) +
+  # Shaded boxes for hip hop periods
+  annotate("rect", xmin = df_shades$xmin, xmax = df_shades$xmax, 
+           ymin = df_shades$ymin, ymax = df_shades$ymax, fill = df_shades$fill, alpha = 0.6) +
+  # Text annotations for periods
+  annotate("text", x = df_text$x, y = df_text$y, label = df_text$label, size = 7, colour = text.color, family = "Montaga") +
+  # Annotation for Rapper's Delight
+  annotate("segment", x = 1979, xend = 1979, y = 3.4, yend = 1.5, colour = text.color,
+           arrow = arrow(length=unit(0.1, "cm"))) +
+  annotate("text", x = 1979 + 2.2, y = 4, label = "Rapper's Delight", size = 6, colour = text.color, 
+           family = "Montaga") +
+  # Bar plot
+  geom_col(fill = "#889690", width = 0.8, color = "black") +
+  labs(title = "Release year of the best Hip Hop songs",
+       x = "Release Year", y = "Number of released songs",
+       subtitle = "The Nineties are considered the Golden Age of Hip Hop.") +
+  scale_x_continuous(breaks = c(1979, 1983, 1986, 1997, 2006, 2014, 2019), expand = c(0.008, 0.008)) +
+  scale_y_continuous(expand = c(0, 0, 0.02, 0))
+
+ggsave(here("2020", "week16", "Plots", "HipHop_periods.pdf"), plot = plot.hiphop.periods,
+       width = 13, height = 7, device = cairo_pdf) 
+
+png <- pdf_convert(here("2020", "week16", "Plots", "HipHop_periods.pdf"), dpi = 400,
+                   filenames = here("2020", "week16", "Plots", "HipHop_periods.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=800}
+include_graphics(here("2020", "week16", "Plots", "HipHop_periods.png"))
+```
+
+Let's have a look at the songs with the highest points. The points were awarded in the follwing way: 10 points for the first ranked track, eight points for the second ranked track, and so on down to two points for the fifth place.
+
+At the top we find "Juicy" by The Notorious B.I.G. with 140 points. The song traces the story of Notorious B.I.G., from his childhood years living in poverty, his dreams of becoming a rapper, the early musical influences, his time dealing drugs, criminal involvement, and his eventual success in the music industry and current lavish lifestyle.
+
+At the second position, we find "Fight the Power" by Public Enemy. The song, which also appeared as soundtrack in the film "Do the Right Thing", alludes to African-American culture, civil rights exhortations, black church services, and the music of James Brown.
+
+The most rated song by a female artist is "U.N.I.T.Y." by "Queen Latifah", whereas the most rated song by a band is "Ready Or Not" by The Fugees.
+
+```{r top_songs}
+cols.gender <-  c("#ff006e", "#3a86ff", "#ffbe0b")
+plot.rank.gender <- rankings %>%
+  head(30) %>%
+  mutate(title = fct_reorder(title, points),
+         gender = as.factor(gender)) %>%
+  ggplot(aes(title, points, fill = gender)) +
+  geom_segment(aes(x = title, xend = title, y = 0, yend = points, color = gender), size = 1.4, show.legend = FALSE) +
+  geom_point(aes(color = gender), size = 4) +
+  scale_y_continuous(breaks = c(seq(0, 150, by = 25)), expand = c(0.008, 0.008)) +
+  scale_fill_manual(name = "Artist(s) gender", values = cols.gender) +
+  scale_color_manual(name = "Artist(s) gender", values = cols.gender) +
+  labs(title = "The greatest Hip Hop songs of all time",  y = "Number of points awarded", x = "",
+       subtitle = "Among the songs with the 30 highest scores, there are two by female artists, and one by a group.") +
+  coord_flip()  +
+  theme(panel.border = element_rect(fill = NA, colour = "grey70"),
+        panel.grid = element_line(colour = "grey87"))
+
+ggsave(here("2020", "week16", "Plots", "Ranking_gender.pdf"), plot = plot.rank.gender,
+       width = 15, height = 12, device = cairo_pdf) 
+
+png <- pdf_convert(here("2020", "week16", "Plots", "Ranking_gender.pdf"), dpi = 400,
+                   filenames = here("2020", "week16", "Plots", "Ranking_gender.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=700, out.height=900}
+include_graphics(here("2020", "week16", "Plots", "Ranking_gender.png"))
+```
+
+The `points` variable already takes into account the ranking of each song. In the following bar chart we can explicitly visualize and break down the rankings associated to each song.
+
+```{r ranks_viz}
+plot.stacked.rank <- rankings %>%
+  inner_join(rankings_df,  by = c("title", "artist", "year", "gender", "points")) %>%
+  select(ID:n5, url) %>%
+  pivot_longer(cols = n1 : n5,
+               names_to = "rank",
+               values_to = "count") %>%
+  mutate(rank = str_sub(rank, start = 2),
+         rank = factor(rank, levels = sort(unique(rank), decreasing = TRUE)),
+         title = paste(title, "\n", artist),
+         title = fct_reorder(title, n)) %>%
+  filter(n >= 5) %>%
+  ggplot(aes(x = count, y = title, fill = rank)) +
+  geom_col(width=0.6, color = "black") +
+  geom_image(aes(x = n + 0.5, y = title, image = url), size = 0.029, asp = 1.375) +
+  scale_fill_manual(name = "Ranking", values = cols, breaks = c("1", "2", "3", "4", "5"),
+                    labels = c("First", "Second", "Third", "Fourth", "Fifth"),
+                    guide = guide_legend(direction = "horizontal", title.position = "top",
+                                         label.position = "bottom")) +
+  labs(title = "The greatest Hip Hop songs of all time",
+       subtitle = "Songs with at least 5 votes",
+       caption = "source: BBC Music, TidyTuesday 2020|week 16",
+       y = NULL, x = "Number of votes received by a pool of 107 critics") +
+  scale_x_continuous(limits = c(0,19), expand = c(0, 0)) +
+  theme(legend.position = c(0.75, 0.5),
+        axis.text.y = element_text(face="bold", color ="black"),
+        axis.text.x = element_text(size = 20, color = "black"),
+        axis.title.x = element_text(size = 22, color = "black"),
+        plot.caption = element_text(size = 18))
+
+ggsave(here("2020", "week16", "Plots", "Ranking_stacked.pdf"), plot = plot.stacked.rank,
+       width = 17.5, height = 16, device = cairo_pdf) 
+
+png <- pdf_convert(here("2020", "week16", "Plots", "Ranking_stacked.pdf"), dpi = 400,
+                   filenames = here("2020", "week16", "Plots", "Ranking_stacked.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=700}
+include_graphics(here("2020", "week16", "Plots", "Ranking_stacked.png"))
+```
+
+# Audio features from Spotify
+
+We can get the audio feature of the Hip Hop songs from the  [Spotify API](http://developer.spotify.com/documentation/web-api/reference/tracks/get-audio-features). The first step is associating the Spotify IDs to the songs in `ratings`.
+
+```{r include=TRUE, eval=FALSE}
+pull_id <- function(query) {
+  # retrieve the id from a query (song title and artist name)
+  search_spotify(query, "track") %>%
+    arrange(-popularity) %>%
+    filter(row_number() == 1) %>%
+    pull(id)
+}
+
+# strip out everything after song name and artist due to featuring artists
+ranking_ids <- rankings %>%
+  mutate(search_query = paste(title, artist),
+         search_query = str_to_lower(search_query),
+         search_query = str_remove(search_query, "ft.*$")) %>%
+  mutate(id = map_chr(search_query, possibly(pull_id, NA_character_)))
+```
+
+```{r query}
+ranking_ids %>%
+  show_table(head = 20, scroll = TRUE, caption = "Dataframe of song rankings with Spotify IDs")
+```
+
+<br/>
+We managed to associate with a Spotify ID more than 94% of the songs in `ratings`. For eighteen of them, no correspondence was found, probably either due to the absence of the song on the Spotify catalogue or because of some slight differences in the song titles.
+
+```{r failed_id}
+ranking_ids %>%
+  filter(is.na(id)) %>%
+  select(title, artist, year) %>%
+  show_table(caption = "Songs without a Spotify ID", align = c("l", "l", "r"))
+```
+
+Now that we have associated the Spotify IDs to the greatest Hip Hop songs, we can get the audio features for the individual tracks. Because the functions can handle a limited set of IDs at a time, we divide the data frame into folds and perform the operation on each subset.
+
+```{r ranking_features}
+# https://developer.spotify.com/documentation/web-api/reference/tracks/get-audio-features/
+ranking_features <- ranking_ids %>%
+  mutate(id_group = row_number() %/% 80) %>%
+  select(id_group, id) %>%
+  nest(data = c(id)) %>%
+  mutate(audio_features = purrr::map(data, ~get_track_audio_features(.$id)))
+
+# https://developer.spotify.com/documentation/web-api/reference/tracks/get-track/
+ranking_tracks <- ranking_ids %>%
+  mutate(id_group = row_number() %/% 50) %>%
+  select(id_group, id) %>%
+  nest(data = c(id)) %>%
+  mutate(track_features = purrr::map(data, ~get_tracks(.$id)))
+```
+
+Let us now create the `rankings_df` data frame by joining the song IDs with their audio and track features, and the URLs of their album covers.
+
+```{r join_audio_track_features}
+audio_features <- ranking_features %>%
+  select(audio_features) %>%
+  unnest(audio_features) %>%
+  select(danceability:tempo, duration_ms, time_signature)
+
+track_features <- ranking_tracks %>%
+  select(track_features) %>%
+  unnest(track_features) %>%
+  select(explicit, popularity)
+
+urls <- ranking_tracks %>%
+  unnest(track_features) %>%
+  pull(album.images) %>%
+  purrr::map(function(x){ ifelse(is.null(x), NA, x[1,2])}) %>%
+  unlist() %>%
+  tibble(url = .)
+
+rankings_df <- ranking_ids %>%
+  bind_cols(audio_features, track_features, urls) %>%
+  select(title, artist, points, year, gender, danceability : popularity, url) %>%
+  na.omit()
+
+rankings_df %>%
+  show_table(caption = "Data frame of song rankings with audio and track features",
+             scroll = TRUE, head = 10)
+```
+
+<br/>
+Let's have a look at the audio features of the tracks. The most common time signature is 4/4, that is, when the song has four quarter note beats.
+
+```{r time_signature}
+# skim(rankings_df)
+rankings_df %>%
+  frequency_table(time_signature, caption = "Time signature of the greatest Hip Hop songs")
+```
+
+"Monster" by Kanye West is the only song in 5/4, whereas "Love Yourz" by J Cole is the only one in 1/4.
+
+```{r time_signature_irregular}
+rankings_df %>%
+  filter(time_signature %in% c(1, 5)) %>%
+  select(title:artist, year, time_signature) %>%
+  show_table(caption = "Irregular time signatures", align = c("l","l","r","r"))
+```
+
+Most of the songs are in major mode and have explicit lyrics.
+
+```{r explicit}
+rankings_df %>%
+  mutate(mode = fct_recode(as.factor(mode), Major = "1", Minor = "0")) %>%
+  frequency_table(mode,
+                  caption = "Mode distribution of the best Hip Hop songs",
+                  align = c("l", "r", "r"))
+
+rankings_df %>%
+  frequency_table(explicit, caption = "Distribution of explicit content in songs' lyrics",
+                  align = c("l", "r", "r"))
+```
+
+```{r histograms}
+rankings_df_tall <- rankings_df %>%
+  select(- c(title:gender, mode, time_signature, explicit, url)) %>%
+  mutate(duration_ms = as.double(duration_ms),
+         popularity = as.double(popularity)) %>%
+  pivot_longer(
+    cols = c(danceability:duration_ms, popularity),
+    names_to = "feature",
+    values_to = "value"
+  )
+
+histogram_features <- rankings_df_tall %>%
+  mutate(feature = factor(feature, levels = unique(rankings_df_tall$feature))) %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 30, fill = "#404664", alpha = 0.7) +
+  facet_wrap(~feature, scales = "free") +
+  labs(x = "", y  = "Density",
+       title = "Audio features of the greatest Hip Hop songs",
+       subtitle = "Hip hop songs tend to be danceable, energic, loud, speechy, acoustic, with a low key  and a positive meaning.",
+       caption = "source: BBC Music, TidyTuesday 2020|week 16, Spotify API") +
+  theme_light() +
+  theme(text = element_text(family = "Montaga"),
+        plot.background = element_rect(fill = mygray),
+        strip.text = element_text(size = 17),
+        strip.background = element_rect(fill = mygray),
+        strip.text.x = element_text(colour = "black"),
+        plot.title = element_text(size = 25),
+        plot.subtitle = element_text(size = 15),
+        plot.caption = element_text(size = 14),
+        axis.text = element_text(size = 10),
+        axis.title.y = element_text(size = 20))
+
+ggsave(here("2020", "week16", "Plots", "Histogram_features.pdf"), plot = histogram_features,
+       width = 11, height = 9, device = cairo_pdf) 
+
+png <- pdf_convert(here("2020", "week16", "Plots", "Histogram_features.pdf"), dpi = 400,
+                   filenames = here("2020", "week16", "Plots", "Histogram_features.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=800}
+include_graphics(here("2020", "week16", "Plots", "Histogram_features.png"))
+```
+
+Let us now plot the correlation matrix. Most of the correlations are close to zero, but some pairs of variables are fairly correlated. It is the case of energy and loudness, that is, energetic songs tend to be loud and the other way around. Year is positively correlated with loudness, and negatively correlated with danceability and valence. This means that more recent songs tend to be louder, sadder, and less danceable.
+
+```{r corrmatrix}
+corrmat <- rankings_df %>%
+  select(year, danceability:tempo, popularity) %>%
+  cor() %>%
+  ggcorrplot(type = "lower", colors = c("#6D9EC1", "white", "#E46726"),
+             outline.col = "black", legend.title = "Correlation",
+             lab = TRUE, ggtheme = ggplot2::theme_light(), lab_size = 3.8) +
+  guides(fill = guide_colorbar(label = TRUE, frame.colour = "black", ticks = TRUE)) +
+  labs(title = "Correlation matrix of the songs audio features")  +
+  theme(text = element_text(family = "Montaga"),
+        plot.background = element_rect(fill = mygray),
+        plot.title = element_text(size = 19),
+        plot.caption = element_text(size = 14),
+        axis.text = element_text(size = 14, colour = "black"),
+        legend.background = element_blank(),
+        legend.text = element_text(size = 9),
+        legend.title = element_text(size = 14))
+
+ggsave(here("2020", "week16", "Plots", "Correlation_matrix.pdf"), plot = corrmat,
+       width = 8, height = 6.77, device = cairo_pdf) 
+
+png <- pdf_convert(here("2020", "week16", "Plots", "Correlation_matrix.pdf"), dpi = 400,
+                   filenames = here("2020", "week16", "Plots", "Correlation_matrix.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=600, out.height=600}
+include_graphics(here("2020", "week16", "Plots", "Correlation_matrix.png"))
+```
+
+# Exploratory Factor Analysis
+
+We can now perform exploratory factor analysis. Factor analysis requires continuous variables, therefore we remove the binary variables `gender`, `explicit`, and `time_signature`. We also remove `tempo`, since this information is alreeady included in `danceability`, the variable `points`, and the duration of the song, which is unlikely to be one of the discriminants for higher scores.
+
+```{r fa}
+rankings_fa <- rankings_df %>%
+  select(-c(title, artist, url, popularity, gender, explicit, mode,
+            time_signature, tempo, duration_ms, points))
+```
+
+The first step is determining the number of common factors to extract. Based on several euristics summarized in the plot below, it seems that 5 factors are sufficient.
+
+```{r number_factors}
+ap <- parallel(subject = nrow(rankings_fa),var = ncol(rankings_fa), rep=100, cent = .05)
+nS <- nScree(x = eigen(cor(rankings_fa))$values, aparallel = ap$eigen$qevpea)
+
+# adapted from plotnScree(nS) function ---------------------------------------------
+eig  <- nS$Analysis$Eigenvalues
+nk   <- length(eig); k <- 1:nk; noc  <- nS$Components$noc
+vp.p <- lm(eig[c(noc + 1, nk)] ~ k[c(noc + 1, nk)])
+leg.txt <- c(paste0("Eigenvalues (> mean  = ", nS$Components$nkaiser, ")"),
+             paste0("Parallel Analysis (n = ",  nS$Components$nparallel, ")"))
+
+screeplot <- data.frame(component = rep(1:length(eig), 2),
+           group = c(rep("eigen", 10), rep("parallel", 10)),
+           value = c(eig, nS$Analysis$Par.Analysis)) %>%
+  ggplot(aes(x = component, y = value, group = group)) +
+  scale_x_continuous(breaks = seq(1, nk, by = 1)) +
+  geom_point(aes(shape = group, colour = group), size = 3) +
+  geom_line(aes(linetype=group, color = group), size = 1.4) +
+  scale_linetype_manual(name = "Method", values = c("solid", "dotted"), label = leg.txt) +
+  scale_color_manual(name = "Method", values = c("#3d405b", "#43aa8b"), label = leg.txt) +
+  scale_shape_manual(name = "Method", values = c(19,17), label = leg.txt) +
+  annotate("segment", x = k[c(1, nk)][1], xend = k[c(1, nk)][2],
+           y = sum(c(1, 1) * coef(vp.p)), yend = sum(c(1, nk) * coef(vp.p)),
+           color = "#e07a5f", size = 1.4) +
+  labs(y = "Eigenvalues", x = "Components",
+       title = "Empirical methods for determining the number of factors",
+       subtitle = "The red line determines the optimal coordinates.") +
+  theme(legend.position = c(0.8,0.93),
+        panel.background = element_rect(fill = "white"),
+        panel.grid = element_line(colour = "grey87"),
+        panel.border = element_rect(colour = "grey70", fill = NA),
+        plot.title = element_text(size = 22))
+
+ggsave(here("2020", "week16", "Plots", "Screeplot.pdf"), plot = screeplot,
+       width = 10, height = 10, device = cairo_pdf) 
+
+png <- pdf_convert(here("2020", "week16", "Plots", "Screeplot.pdf"), dpi = 400,
+                   filenames = here("2020", "week16", "Plots", "Screeplot.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=600}
+include_graphics(here("2020", "week16", "Plots", "Screeplot.png"))
+```
+
+Let's fit a factor analysis model with 4 factors.
+
+```{r fa_output}
+nf <- nS$Components$nkaiser
+fa <- fa(rankings_fa, nfactors = nf, rotate = "varimax")
+colnames(fa$loadings) <- paste0("Factor", 1:nf)
+fa
+```
+
+Let us visualize the contributions that each variable for measuring each common factor.
+
+```{r}
+tidied_fa <- fa$loadings[] %>%
+  as.data.frame() %>%
+  pivot_longer(
+    cols = 1:nf,
+    names_to = "factor",
+    values_to = "value"
+    ) %>%
+  mutate(factor = fct_inorder(factor),
+         terms = rep(rownames(fa$loadings[]), each = length(unique(factor)))) %>%
+  select(terms, value, factor) %>%
+  arrange(factor)
+
+cols.extended <- rev(colorRampPalette(c(c("#404664", "#726CC6", "#AAA7DD",
+                                          "#D3D3EE", "#e0afa0", "#FBE8DA")))(nrow(fa$loadings)))
+
+loadings <- tidied_fa %>%
+  ggplot(aes(value, terms, fill = value)) +
+  geom_col(color = "black") +
+  facet_wrap(~factor) +
+  labs(x = "Loading value", y = NULL, title = "Loadings from the 4-factor analysis model") +
+  scale_fill_gradientn(name = "Factor loading value\n", colors = cols.extended,
+                       guide = guide_colorbar(label = TRUE, draw.ulim = TRUE, draw.llim = TRUE,
+                                              frame.colour = "black", ticks = TRUE,
+                                              label.position = "bottom", barwidth = 7,
+                                              barheight = 1.3, direction = 'horizontal')) +
+  theme(plot.title = element_text(size = 22),
+        panel.background = element_rect(fill = "white"),
+        panel.grid = element_line(colour = "grey87"),
+        panel.border = element_rect(fill = NA, colour = mygray),
+        strip.background = element_rect(fill = mygray))
+
+ggsave(here("2020", "week16", "Plots", "Loadings.pdf"), plot = loadings,
+       width = 12, height = 10, device = cairo_pdf) 
+
+png <- pdf_convert(here("2020", "week16", "Plots", "Loadings.pdf"), dpi = 400,
+                   filenames = here("2020", "week16", "Plots", "Loadings.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=700}
+include_graphics(here("2020", "week16", "Plots", "Loadings.png"))
+```
+
+The first factor is a measure of the energy and loudness of the song, the second one of the year of release of the song and the valence, that is, how happy the song sounds. The third factor contrasts the danceability of the song to its acousticness, speachiness and liveness, whereas the last factor is related to the musical characteristics of the song, such as the instrumentalness and the key.
+
+Let's plot the factor scores of the first two factors. The points are very smoothly distributed.
+The songs on the right are louder and/or more energetic, the songs on the left are quiter and/or not energetic. The songs at the top are old and positive, the songs at the bottom are newer and negative.
+
+```{r}
+# Major mode is associated to positivity, happiness, energy, whereas minor with sadness.
+factor_scores <- fa$scores %>%
+  as_tibble()  %>%
+  magrittr::set_colnames(paste0("Factor", 1:nf))
+
+factor_scores_f1f2 <- rankings_df %>%
+  select(title) %>%
+  bind_cols(factor_scores %>%
+      select(1:2))
+
+songs_extrema <- rankings_df %>%
+  select(title, artist, loudness, energy, year, valence, danceability, key,
+         speechiness, acousticness, instrumentalness, liveness) %>%
+  filter(title!="Learned from Texas") %>%
+  slice(which.max(loudness), which.min(loudness),
+        which.max(energy), which.min(energy),
+        which.max(year), which.min(year),
+        which.max(valence), which.min(valence),
+        which.max(danceability), which.min(danceability),
+        which.max(speechiness), which.min(speechiness),
+        which.max(acousticness), which.min(acousticness),
+        which.max(liveness), which.min(liveness)) %>%
+  add_column(feature = c("Loudest", "Quietest", "Most energic", "Calmest",
+                         "Most recent", "Oldest", "Most positive", "Most negative",
+                         "Most danceable", "Least danceable", "Most speechy",
+                         "Least speechy", "Most acoustic", "Least acoustic",
+                         "Most likely live", "Least likely live"))
+
+df_repel <- factor_scores_f1f2 %>%
+  left_join(songs_extrema %>%
+              left_join(factor_scores_f1f2, by = "title") %>%
+              slice(1:8),
+            by = c("title", "Factor1", "Factor2")) %>%
+  mutate(label = ifelse(!is.na(feature), feature, ""),
+         xmin = Factor1 - nchar(title)/(11 * 10),
+         xmax = Factor1 + nchar(title)/(11 * 10),
+         ymin = Factor2 - 0.07,
+         ymax = Factor2 + 0.07)
+
+plot.factor_scores <- factor_scores_f1f2 %>%
+  ggplot(aes(Factor1, Factor2, label = title)) +
+  geom_text(check_overlap = TRUE, family = "Montaga") +
+  geom_label_repel(
+    data = df_repel[df_repel$title != "Old Town Road (Remix)",],
+    aes(Factor1, Factor2, label = label),
+    min.segment.length = 0.3,
+    family = "Montaga", force = 1, size = 4, point.padding = 0.3, box.padding = 0.6,
+    color = "#2343E7", inherit.aes = FALSE
+  ) +
+  # fix label for Old Town Road ------
+  geom_label_repel(
+    data = df_repel[df_repel$title == "Old Town Road (Remix)",],
+    aes(Factor1, Factor2, label = label),
+    min.segment.length = 0.3, family = "Montaga", force = 1, size = 4,
+    point.padding = 0.3, box.padding = 0.6,
+    color = "#2343E7", inherit.aes = FALSE, xlim = c(-0.5, -0.3), ylim = c(-0.9, -0.8)
+  ) +
+  coord_cartesian(ylim = c(-2.3, 2.1), xlim = c(-3.1, 1.7), clip="off") +
+  labs(x = "Factor 1", y = "Factor 2",
+       title = "How the Hip Hop songs are placed on the two-dimensional factor subspace",
+       subtitle = "First two common factors") +
+  annotate("segment", x = 0, xend = 1.3, y = -2.9, yend = -2.9, arrow = arrow(length=unit(0.3, "cm"))) +
+  annotate("text", x = 0.6, y = -2.8, label = "Louder and/or more energetic songs",
+           size = 5, family = "Montaga") +
+  annotate("segment", x = -3.5, xend = -3.5, y = 0.25, yend = 1.9, arrow = arrow(length=unit(0.3, "cm"))) +
+  annotate("text", x = -3.6, y = 1.1, label = "Older and/or more positive songs",
+           size = 5, angle = 90, family = "Montaga") +
+  theme(plot.margin = unit(c(0.2,1.7,1,1.7), "cm"),
+        panel.background = element_rect(fill = "white"),
+        panel.grid = element_line(colour = "grey87"),
+        panel.border = element_rect(colour = "grey70", fill = NA),
+        plot.title = element_text(size = 22),
+        axis.text = element_text(size = 15),
+        axis.title = element_text(size = 18)) +
+  draw_image(image = "Images/headphones.png", x = 1.67, y = -2.76, hjust = .5, vjust = .5, width = 0.4) +
+  draw_image(image = "Images/gramophone.png", x = -3.5, y = 2.28, hjust = .5, vjust = .5, width = 0.4) +
+  draw_image(image = "Images/star.png", x = -3.7, y = 2.28, hjust = .5, vjust = .3, width = 0.2)
+
+ggsave(here("2020", "week16", "Plots", "Factor_scores.pdf"), plot = plot.factor_scores,
+       width = 15, height = 10, device = cairo_pdf) 
+
+png <- pdf_convert(here("2020", "week16", "Plots", "Factor_scores.pdf"), dpi = 400,
+                   filenames = here("2020", "week16", "Plots", "Factor_scores.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=800}
+include_graphics(here("2020", "week16", "Plots", "Factor_scores.png"))
+```
+
