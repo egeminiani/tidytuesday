@@ -302,7 +302,8 @@ plot.hiphop.periods <- polls %>%
   geom_col(fill = "#889690", width = 0.8, color = "black") +
   labs(title = "Release year of the best Hip Hop songs",
        x = "Release Year", y = "Number of released songs",
-       subtitle = "The Nineties are considered the Golden Age of Hip Hop.") +
+       subtitle = "The Nineties are considered the Golden Age of Hip Hop.",
+       caption = "source: BBC Music, TidyTuesday 2020|week 16") +
   scale_x_continuous(breaks = c(1979, 1983, 1986, 1997, 2006, 2014, 2019), expand = c(0.008, 0.008)) +
   scale_y_continuous(expand = c(0, 0, 0.02, 0))
 
@@ -339,7 +340,8 @@ plot.rank.gender <- rankings %>%
   scale_fill_manual(name = "Artist(s) gender", values = cols.gender) +
   scale_color_manual(name = "Artist(s) gender", values = cols.gender) +
   labs(title = "The greatest Hip Hop songs of all time",  y = "Number of points awarded", x = "",
-       subtitle = "Among the songs with the 30 highest scores, there are two by female artists, and one by a group.") +
+       subtitle = "Among the songs with the 30 highest scores, there are two by female artists, and one by a group.",
+       caption = "source: BBC Music, TidyTuesday 2020|week 16") +
   coord_flip()  +
   theme(panel.border = element_rect(fill = NA, colour = "grey70"),
         panel.grid = element_line(colour = "grey87"))
@@ -570,18 +572,19 @@ corrmat <- rankings_df %>%
              outline.col = "black", legend.title = "Correlation",
              lab = TRUE, ggtheme = ggplot2::theme_light(), lab_size = 3.8) +
   guides(fill = guide_colorbar(label = TRUE, frame.colour = "black", ticks = TRUE)) +
-  labs(title = "Correlation matrix of the songs audio features")  +
+  labs(title = "Correlation matrix of the songs audio features",
+       caption = "source: BBC Music, TidyTuesday 2020|week 16, Spotify API")  +
   theme(text = element_text(family = "Montaga"),
         plot.background = element_rect(fill = mygray),
         plot.title = element_text(size = 19),
-        plot.caption = element_text(size = 14),
+        plot.caption = element_text(size = 10),
         axis.text = element_text(size = 14, colour = "black"),
         legend.background = element_blank(),
         legend.text = element_text(size = 9),
         legend.title = element_text(size = 14))
 
 ggsave(here("2020", "week16", "Plots", "Correlation_matrix.pdf"), plot = corrmat,
-       width = 8, height = 6.77, device = cairo_pdf) 
+       width = 7.8, height = 6.77, device = cairo_pdf) 
 
 png <- pdf_convert(here("2020", "week16", "Plots", "Correlation_matrix.pdf"), dpi = 400,
                    filenames = here("2020", "week16", "Plots", "Correlation_matrix.png"),
@@ -630,7 +633,8 @@ screeplot <- data.frame(component = rep(1:length(eig), 2),
            color = "#e07a5f", size = 1.4) +
   labs(y = "Eigenvalues", x = "Components",
        title = "Empirical methods for determining the number of factors",
-       subtitle = "The red line determines the optimal coordinates.") +
+       subtitle = "The red line determines the optimal coordinates.",
+       caption = "source: BBC Music, TidyTuesday 2020|week 16, Spotify API") +
   theme(legend.position = c(0.8,0.93),
         panel.background = element_rect(fill = "white"),
         panel.grid = element_line(colour = "grey87"),
@@ -680,7 +684,8 @@ loadings <- tidied_fa %>%
   ggplot(aes(value, terms, fill = value)) +
   geom_col(color = "black") +
   facet_wrap(~factor) +
-  labs(x = "Loading value", y = NULL, title = "Loadings from the 4-factor analysis model") +
+  labs(x = "Loading value", y = NULL, title = "Loadings from the 4-factor analysis model",
+       caption = "source: BBC Music, TidyTuesday 2020|week 16, Spotify API") +
   scale_fill_gradientn(name = "Factor loading value\n", colors = cols.extended,
                        guide = guide_colorbar(label = TRUE, draw.ulim = TRUE, draw.llim = TRUE,
                                               frame.colour = "black", ticks = TRUE,
@@ -777,16 +782,21 @@ plot.factor_scores <- factor_scores_f1f2 %>%
   annotate("segment", x = -3.5, xend = -3.5, y = 0.25, yend = 1.9, arrow = arrow(length=unit(0.3, "cm"))) +
   annotate("text", x = -3.6, y = 1.1, label = "Older and/or more positive songs",
            size = 5, angle = 90, family = "Montaga") +
-  theme(plot.margin = unit(c(0.2,1.7,1,1.7), "cm"),
+  annotate("text", label = "source: BBC Music, TidyTuesday 2020|week 16, Spotify API", 
+           x = 1, y = -3.1, family = "Montaga") +
+  theme(plot.margin = unit(c(0.2,1.7,1.5,1.7), "cm"),
         panel.background = element_rect(fill = "white"),
         panel.grid = element_line(colour = "grey87"),
         panel.border = element_rect(colour = "grey70", fill = NA),
         plot.title = element_text(size = 22),
         axis.text = element_text(size = 15),
         axis.title = element_text(size = 18)) +
-  draw_image(image = "Images/headphones.png", x = 1.67, y = -2.76, hjust = .5, vjust = .5, width = 0.4) +
-  draw_image(image = "Images/gramophone.png", x = -3.5, y = 2.28, hjust = .5, vjust = .5, width = 0.4) +
-  draw_image(image = "Images/star.png", x = -3.7, y = 2.28, hjust = .5, vjust = .3, width = 0.2)
+  draw_image(image = here("2020", "week16", "Images", "headphones.png"), 
+             x = 1.67, y = -2.76, hjust = .5, vjust = .5, width = 0.4) +
+  draw_image(image = here("2020", "week16", "Images", "gramophone.png"),
+             x = -3.5, y = 2.28, hjust = .5, vjust = .5, width = 0.4) +
+  draw_image(image = here("2020", "week16", "Images", "star.png"),
+             x = -3.7, y = 2.28, hjust = .5, vjust = .3, width = 0.2)
 
 ggsave(here("2020", "week16", "Plots", "Factor_scores.pdf"), plot = plot.factor_scores,
        width = 15, height = 10, device = cairo_pdf) 
