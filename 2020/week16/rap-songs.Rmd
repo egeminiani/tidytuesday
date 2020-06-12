@@ -52,7 +52,7 @@ access_token <- spotifyr::get_spotify_access_token()
 Earlier this year, BBC Music asked more than 100 critics, artists, and other music industry experts for their five favorite hip-hop tracks. The complete poll results together with 
 information about the voters are available at the [#tidytuesday Github repository](https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-04-14).
 
-Let us explore the data sets, see which are the most rated songs, and which song characteristics are associated with high critic scores. We start by loading the packages and some functions required for the analysis.
+Let us explore the data sets, see which are the most rated songs, and explore their audio features such as loudness, danceability and instrumentalness. We start by loading the packages and some functions required for the analysis.
 
 ```{r packages}
 library(tidyverse)
@@ -159,7 +159,7 @@ rankings <- read_delim('https://raw.githubusercontent.com/rfordatascience/tidytu
 
 ## Polls
 
-The `polls` data set gathers information about the voters (that is, name, occupation, and country of origin), the five songs titles from most to least favorite, the singers’ names and gender, and the release years of the songs.
+The `polls` data set gathers information about the voters (that is, name, occupation, and country of origin), their five songs from most to least favorite, the singers’ names and gender, and the release years of the songs.
 
 ```{r polls_table}
 polls %>%
@@ -169,7 +169,7 @@ polls %>%
 
 ## Rankings
 
-For each song, the `rankings` data set reports some metadata, including the name of the artist(s), the release year, and how many voters picked it among their favorites. The `points` variable gives each song a total score that takes into account where the song is positioned in the voters' rankings. More specifically, each track is awarded ten points if it ranks first, eight points if it ranks second, and so on down to two points for fifth place.
+The `rankings` data set reports some metadata, including the name of the artists, the song release year, and how many voters picked each song among their favorites. The `points` variable gives each song a total score that takes into account where the song is positioned in the voters' rankings. Each track is awarded ten points if it ranks first, eight points if it ranks second, and so on down to two points for fifth place.
 
 ```{r rankings_table}
 rankings %>%
@@ -179,7 +179,7 @@ rankings %>%
 
 # Exploratory Analysis
 
-Before delving into the Hip Hop songs, let's have a look at the voters first. The voters come from 13 countries across the six  continents: North America, South America, Europe, Africa, Asia, and Australia. BBC Music mostly contacted voters coming from the United States, probably because that is the area where the hip hop musical genre culturally originated.
+Before delving into the Hip Hop songs, let's have a look at the voters first. The voters come from 13 countries across the six continents: North America, South America, Europe, Africa, Asia, and Australia. The majority of the voters contacted by BBC Music are from the United States, as that is the region where hip-hop culturally originated.
 
 ```{r countries_table}
 df_countries <- polls %>%
@@ -227,7 +227,7 @@ png <- pdf_convert(here("2020", "week16", "Plots", "Critics_map.pdf"), dpi = 400
 include_graphics(here("2020", "week16", "Plots", "Critics_map.png"))
 ```
 
-Fifty of the 107 voters are music critics; the occupations of the other voters are shown in the treemap below.
+Fifty out of 107 voters are music critics. The occupations of the remaining voters are shown in the treemap below.
 
 ```{r treemap}
 plot.roles <- polls %>%
@@ -260,7 +260,7 @@ png <- pdf_convert(here("2020", "week16", "Plots", "Critics_roles.pdf"), dpi = 4
 include_graphics(here("2020", "week16", "Plots", "Critics_roles.png"))
 ```
 
-Now that we have inspected the critics, let's have a look at the songs and the singers. Most Hip Hop artists are male. Female artists and featured collaborations come almost in a tie, and account jointly for about 20% of the greatest songs.
+Now that we have inspected the critics, let's have a look at the songs and singers. Most Hip Hop artists are male. Female artists and featured collaborations come almost in a tie and jointly account for about 20% of the greatest songs.
 
 ```{r plot_gender}
 polls %>%
@@ -269,7 +269,7 @@ polls %>%
                   caption = "The gender of the best Hip Hop artists according to the BBC Music poll")
 ```
 
-The best Hip Hop songs were released in the last 30 years. The oldest song is "Rapper's Delight" by the Sugarhill Gang, and it is dated back to 1979. While it was not the first single to include rapping, "Rapper's Delight" is credited for [introducing hip hop music to a wide audience](https://en.wikipedia.org/wiki/Rapper%27s_Delight). By 1979 hip hop music had become a mainstream genre. The most rated songs were released from the early to the late Nineties. This period is considered the [Golden Age of Hip Hop](https://en.wikipedia.org/wiki/Hip_hop_music#1986%E2%80%931997:_Golden_age_hip_hop).
+The best Hip Hop songs were released in the last 30 years. The oldest song is "Rapper's Delight" by the Sugarhill Gang, and it is dated back to 1979. While it was not the first single to include rapping, "Rapper's Delight" is credited for [introducing hip hop music to a wide audience](https://en.wikipedia.org/wiki/Rapper%27s_Delight). By 1979 hip hop music had become a mainstream genre. The most rated songs were released from the early to the late Nineties. This period is considered the [Golden Age of Hip Hop](https://en.wikipedia.org/wiki/Hip_hop_music).
 
 ```{r year}
 text.color <- "#46494c"
@@ -319,11 +319,11 @@ png <- pdf_convert(here("2020", "week16", "Plots", "HipHop_periods.pdf"), dpi = 
 include_graphics(here("2020", "week16", "Plots", "HipHop_periods.png"))
 ```
 
-Let's have a look at the songs with the highest points. The points were awarded in the follwing way: 10 points for the first ranked track, eight points for the second ranked track, and so on down to two points for the fifth place.
+Let's have a look at the songs with the highest points. The points were awarded in the following way: 10 points for the first ranked track, eight points for the second-ranked track, and so on down to two points for the fifth place.
 
-At the top we find "Juicy" by The Notorious B.I.G. with 140 points. The song traces the story of Notorious B.I.G., from his childhood years living in poverty, his dreams of becoming a rapper, the early musical influences, his time dealing drugs, criminal involvement, and his eventual success in the music industry and current lavish lifestyle.
+At the top, we find "Juicy" by The Notorious B.I.G. with 140 points. The song traces the story of Notorious B.I.G., from his childhood years living in poverty, his dreams of becoming a rapper, the early musical influences, his time dealing drugs, criminal involvement, and his eventual success in the music industry and current lavish lifestyle.
 
-At the second position, we find "Fight the Power" by Public Enemy. The song, which also appeared as soundtrack in the film "Do the Right Thing", alludes to African-American culture, civil rights exhortations, black church services, and the music of James Brown.
+In the second position, we find "Fight the Power" by Public Enemy. The song, which also appeared as a soundtrack in the film "Do the Right Thing", alludes to African-American culture, civil rights exhortations, black church services, and the music of James Brown.
 
 The most rated song by a female artist is "U.N.I.T.Y." by "Queen Latifah", whereas the most rated song by a band is "Ready Or Not" by The Fugees.
 
@@ -358,7 +358,7 @@ png <- pdf_convert(here("2020", "week16", "Plots", "Ranking_gender.pdf"), dpi = 
 include_graphics(here("2020", "week16", "Plots", "Ranking_gender.png"))
 ```
 
-The `points` variable already takes into account the ranking of each song. In the following bar chart we can explicitly visualize and break down the rankings associated to each song.
+The following bar chart breaks down the rankings associated with the songs that received at least five votes.
 
 ```{r ranks_viz}
 plot.stacked.rank <- rankings %>%
@@ -402,7 +402,7 @@ png <- pdf_convert(here("2020", "week16", "Plots", "Ranking_stacked.pdf"), dpi =
 include_graphics(here("2020", "week16", "Plots", "Ranking_stacked.png"))
 ```
 
-# Audio features from Spotify
+# Audio features from Spotify {.tabset .tabset-pills}
 
 We can get the audio feature of the Hip Hop songs from the  [Spotify API](http://developer.spotify.com/documentation/web-api/reference/tracks/get-audio-features). The first step is associating the Spotify IDs to the songs in `ratings`.
 
@@ -423,22 +423,24 @@ ranking_ids <- rankings %>%
   mutate(id = map_chr(search_query, possibly(pull_id, NA_character_)))
 ```
 
+Following is the dataframe of the song rankings with the associated Spotify IDs.
+
 ```{r query}
 ranking_ids %>%
-  show_table(head = 20, scroll = TRUE, caption = "Dataframe of song rankings with Spotify IDs")
+  show_table(head = 20, scroll = TRUE, caption = "Dataframe of song rankings with Spotify IDs (first 20 rows)")
 ```
 
 <br/>
-We managed to associate with a Spotify ID more than 94% of the songs in `ratings`. For eighteen of them, no correspondence was found, probably either due to the absence of the song on the Spotify catalogue or because of some slight differences in the song titles.
+We managed to associate with a Spotify ID more than 94% of the songs. For eighteen of them, no correspondence was found, probably either due to the absence of the song on the Spotify catalog or because of some slight differences in the song titles.
 
 ```{r failed_id}
 ranking_ids %>%
   filter(is.na(id)) %>%
   select(title, artist, year) %>%
-  show_table(caption = "Songs without a Spotify ID", align = c("l", "l", "r"))
+  show_table(caption = "Songs without a Spotify ID and discarded from the analysis", align = c("l", "l", "r"))
 ```
 
-Now that we have associated the Spotify IDs to the greatest Hip Hop songs, we can get the audio features for the individual tracks. Because the functions can handle a limited set of IDs at a time, we divide the data frame into folds and perform the operation on each subset.
+Now that we have associated the greatest Hip Hop songs with their Spotify IDs, we can get the audio features for the individual tracks. Because the functions can handle a limited set of IDs at a time, we divide the data frame into folds and perform the operation on each subset.
 
 ```{r ranking_features}
 # https://developer.spotify.com/documentation/web-api/reference/tracks/get-audio-features/
@@ -456,7 +458,7 @@ ranking_tracks <- ranking_ids %>%
   mutate(track_features = purrr::map(data, ~get_tracks(.$id)))
 ```
 
-Let us now create the `rankings_df` data frame by joining the song IDs with their audio and track features, and the URLs of their album covers.
+We create the `rankings_df` data frame by joining the song IDs with their audio and track features, and the URLs of their album covers.
 
 ```{r join_audio_track_features}
 audio_features <- ranking_features %>%
@@ -482,12 +484,16 @@ rankings_df <- ranking_ids %>%
   na.omit()
 
 rankings_df %>%
-  show_table(caption = "Data frame of song rankings with audio and track features",
-             scroll = TRUE, head = 10)
+  show_table(caption = "Dataframe of song rankings with audio and track features (first 20 rows)",
+             scroll = TRUE, head = 20)
 ```
 
 <br/>
-Let's have a look at the audio features of the tracks. The most common time signature is 4/4, that is, when the song has four quarter note beats.
+Let's have a look at the audio features of the tracks. 
+
+## Time signature 
+
+The most common time signature is 4/4, that is, when the song has four quarter note beats. "Monster" by Kanye West is the only song in 5/4, whereas "Love Yourz" by J Cole is the only one in 1/4.
 
 ```{r time_signature}
 # skim(rankings_df)
@@ -495,28 +501,30 @@ rankings_df %>%
   frequency_table(time_signature, caption = "Time signature of the greatest Hip Hop songs")
 ```
 
-"Monster" by Kanye West is the only song in 5/4, whereas "Love Yourz" by J Cole is the only one in 1/4.
+## Mode
 
-```{r time_signature_irregular}
-rankings_df %>%
-  filter(time_signature %in% c(1, 5)) %>%
-  select(title:artist, year, time_signature) %>%
-  show_table(caption = "Irregular time signatures", align = c("l","l","r","r"))
-```
+Most of the songs are in major mode, which is often associated with feelings of positivity and happiness.
 
-Most of the songs are in major mode and have explicit lyrics.
-
-```{r explicit}
+```{r mode}
 rankings_df %>%
   mutate(mode = fct_recode(as.factor(mode), Major = "1", Minor = "0")) %>%
   frequency_table(mode,
                   caption = "Mode distribution of the best Hip Hop songs",
                   align = c("l", "r", "r"))
+```
 
+
+## Explicit content
+
+Most of the songs have explicit lyrics. Greg Beato of the magazine "Reason" [observed](https://en.wikipedia.org/wiki/Parental_Advisory) that by the 1990s, "A hip-hop album that didn't warrant a Tipper (the co-founder of the center commonly credited with beginning movements for the *Parental Advisory* label, ed.) sticker was artistically suspect".
+
+```{r explicit}
 rankings_df %>%
-  frequency_table(explicit, caption = "Distribution of explicit content in songs' lyrics",
+  frequency_table(explicit, caption = "Distribution of explicit content in songs lyrics",
                   align = c("l", "r", "r"))
 ```
+
+# {-}
 
 ```{r histograms}
 rankings_df_tall <- rankings_df %>%
@@ -562,7 +570,7 @@ png <- pdf_convert(here("2020", "week16", "Plots", "Histogram_features.pdf"), dp
 include_graphics(here("2020", "week16", "Plots", "Histogram_features.png"))
 ```
 
-Let us now plot the correlation matrix. Most of the correlations are close to zero, but some pairs of variables are fairly correlated. It is the case of energy and loudness, that is, energetic songs tend to be loud and the other way around. Year is positively correlated with loudness, and negatively correlated with danceability and valence. This means that more recent songs tend to be louder, sadder, and less danceable.
+Let us quantify the relationships existing among these features through a correlation plot. Most of the correlations are close to zero, but some pairs of variables are fairly correlated. It is the case of `energy` and `loudness`, that is, energetic songs tend to be loud and the other way around. The variable `year` is positively correlated with `loudness`, and negatively correlated with `danceability` and `valence`. This means that more recent songs tend to be louder, sadder, and less danceable.
 
 ```{r corrmatrix}
 corrmat <- rankings_df %>%
@@ -597,7 +605,7 @@ include_graphics(here("2020", "week16", "Plots", "Correlation_matrix.png"))
 
 # Exploratory Factor Analysis
 
-We can now perform exploratory factor analysis. Factor analysis requires continuous variables, therefore we remove the binary variables `gender`, `explicit`, and `time_signature`. We also remove `tempo`, since this information is alreeady included in `danceability`, the variable `points`, and the duration of the song, which is unlikely to be one of the discriminants for higher scores.
+We can perform an exploratory factor analysis to find a small number of factors that can explain the relationships among the song features. Since factor analysis requires continuous variables, we remove the binary variables `gender`, `explicit`, and `time_signature`. We also drop `tempo` given that it is already included in `danceability`, and `duration_ms`.
 
 ```{r fa}
 rankings_fa <- rankings_df %>%
@@ -605,7 +613,7 @@ rankings_fa <- rankings_df %>%
             time_signature, tempo, duration_ms, points))
 ```
 
-The first step is determining the number of common factors to extract. Based on several euristics summarized in the plot below, it seems that 5 factors are sufficient.
+The first step is determining the number of common factors to extract. Based on the heuristics summarized in the plot below, five factors seem to be sufficient.
 
 ```{r number_factors}
 ap <- parallel(subject = nrow(rankings_fa),var = ncol(rankings_fa), rep=100, cent = .05)
@@ -649,7 +657,7 @@ png <- pdf_convert(here("2020", "week16", "Plots", "Screeplot.pdf"), dpi = 400,
                    verbose = FALSE)
 ```
 
-```{r, echo=FALSE, out.width=600}
+```{r, echo=FALSE, out.width=500}
 include_graphics(here("2020", "week16", "Plots", "Screeplot.png"))
 ```
 
@@ -662,7 +670,7 @@ colnames(fa$loadings) <- paste0("Factor", 1:nf)
 fa
 ```
 
-Let us visualize the contributions that each variable for measuring each common factor.
+Let us visualize the contributions of each variable for measuring each common factor. The first factor is a measure of the `energy` and `loudness` of the song, the second one of the `year` of release of the song, and the `valence`, that is, how happy the song sounds. The third factor contrasts the `danceability` of the song to its `acousticness`, `speachiness`, and `liveness`. In contrast, the last factor is related to the musical characteristics of the song, such as `instrumentalness` and `key`.
 
 ```{r}
 tidied_fa <- fa$loadings[] %>%
@@ -709,13 +717,10 @@ png <- pdf_convert(here("2020", "week16", "Plots", "Loadings.pdf"), dpi = 400,
 include_graphics(here("2020", "week16", "Plots", "Loadings.png"))
 ```
 
-The first factor is a measure of the energy and loudness of the song, the second one of the year of release of the song and the valence, that is, how happy the song sounds. The third factor contrasts the danceability of the song to its acousticness, speachiness and liveness, whereas the last factor is related to the musical characteristics of the song, such as the instrumentalness and the key.
-
-Let's plot the factor scores of the first two factors. The points are very smoothly distributed.
-The songs on the right are louder and/or more energetic, the songs on the left are quiter and/or not energetic. The songs at the top are old and positive, the songs at the bottom are newer and negative.
+Lastly, we plot the factor scores of the songs along the first two factors. The points seem to be smoothly distributed.
+On the left, we find quiet and/or calm songs that become progressively louder and/or more energetic as one moves to the right.  The songs at the top are old and positive, whereas at the bottom we find newer and/or more negative songs.
 
 ```{r}
-# Major mode is associated to positivity, happiness, energy, whereas minor with sadness.
 factor_scores <- fa$scores %>%
   as_tibble()  %>%
   magrittr::set_colnames(paste0("Factor", 1:nf))
