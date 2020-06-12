@@ -43,7 +43,7 @@ library(rmdformats)
 library(kableExtra)
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE, dpi = 400)
 load(here::here("2020", "week16", "Workspace", "workspace.RData"))
-source(here::here("2020", "week16", "setToken.R"), encoding = "UTF-8")
+source(here::here("2020", "week16", "EXTRA", "setToken.R"), encoding = "UTF-8")
 access_token <- spotifyr::get_spotify_access_token()
 ```
 
