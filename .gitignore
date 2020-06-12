@@ -1,5 +1,6 @@
-# Custom folders to ignore
+# Custom files and folders to ignore
 **/EXTRA/
+**/README.html
 
 # R files
 # History files
