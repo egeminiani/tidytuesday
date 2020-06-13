@@ -22,9 +22,8 @@ text-align: justify}
 ```{r setup, include=FALSE}
 library(knitr)
 library(rmdformats)
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE, dpi = 400,
-                      fig.path = paste0(here::here(), "/2019/week35/Plots/"), 
-                      fig.keep = "all")
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE, dpi = 400)
+                    #  fig.path = paste0(here::here(), "/2019/week35/Plots/"), fig.keep = "all")
 ```
 
 <img style="float: right;width: 170px;" src="Images/simpsons_image.png">
@@ -56,7 +55,36 @@ library(GGally)
 library(udpipe)
 library(here)
 library(pdftools)
+library(rvest)    
+library(stringi)
+library(ggimage)
+library(ggrepel)
+library(cowplot)
+
+library(showtext)
+font_add_google("Caveat Brush", "Caveat Brush")
+showtext_auto()
 theme_set(theme_bw())
+theme_update(text = element_text(family = "Caveat Brush"),
+             plot.title = element_text(size = 24),
+             plot.subtitle = element_text(size = 21),
+             plot.caption = element_text(size = 12),
+             axis.text = element_text(colour = "black", size = 12),
+             axis.title = element_text(size = 17),
+             legend.text = element_text(size=18),
+             legend.position = "bottom",
+             strip.text = element_text(size = 17))
+        # plot.background = element_rect(fill = "#FEDD48")
+        # panel.grid = element_blank(),
+        # panel.border = element_blank(),
+        # panel.background = element_rect(fill = mygray),
+        # plot.background = element_rect(fill = mygray),
+        # strip.background = element_rect(fill = mygray),
+        # axis.ticks = element_blank(),
+        # legend.background = element_blank(),
+        # legend.box.background = element_blank(),
+        # 
+        # strip.text.x = element_text(colour = "black"))
 
 show_table <- function(x, caption = "", head = 50, scroll = FALSE, full.width = FALSE, 
                        digits = 2, col.names = NA, align = NULL){
@@ -290,9 +318,11 @@ lollipop <- function(df, x, fill.var, count = TRUE, index = NULL, title = "", yl
       alpha = 0.6) +
     coord_flip() +
     labs(x = "", y = ylab, title = title, subtitle = sub) +
-    scale_fill_manual(name  = firstup(as_label(fill.var)),  values = rev(colors[1:2])) +
-    scale_color_manual(name = firstup(as_label(fill.var)),  values = rev(colors[1:2])) +
-    theme(legend.position = pos)
+    scale_fill_manual(name  = "",  values = rev(colors[1:2])) +
+    scale_color_manual(name = "",  values = rev(colors[1:2])) +
+    theme(legend.position = pos,
+          legend.title = element_text(size = 13),
+          legend.text = element_text(size = 13))
 
   if(labels){
     p <- p +
@@ -308,8 +338,22 @@ plot.supporting.chars <- dialogues.tidy %>%
   lollipop(x  = role, fill.var = gender, index = c(11:35), title = "The Simpsons supporting cast",
            ylab = "Number of spoken words in 26 seasons")
 
-ggarrange(plot.top.chars, plot.supporting.chars, nrow = 1, 
-          common.legend = TRUE, legend="bottom", widths = c(0.95, 1.05))
+double.plot <- ggarrange(plot.top.chars, plot.supporting.chars, nrow = 1, 
+          common.legend = TRUE, legend="bottom", widths = c(0.9, 1.1))
+double.plot <- annotate_figure(double.plot, bottom = text_grob("source: TidyTuesday 2019|week 35, Kaggle", 
+                                                               hjust = 1, x = 1, size = 12,
+                                                               family = "Caveat Brush"))
+
+ggsave(here("2019", "week35", "Plots", "characters_plots.pdf"), plot = double.plot,
+       width = 13, height = 8, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "characters_plots.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "characters_plots.png"),
+                   verbose = FALSE)
+```
+
+```{r echo=FALSE, out.width=900}
+include_graphics(here("2019", "week35", "Plots", "characters_plots.png"))
 ```
 
 Let us look at how the total number of words of the top four leading characters (Homer, Marge, Bart, and Lisa Simpson) has evolved throughout the seasons.
@@ -321,7 +365,7 @@ Top20Chars <- dialogues.tidy %>%
   head(20) %>%
   pull(role)
 
-dialogues.tidy %>%
+nb_lines_characters <- dialogues.tidy %>%
   filter(role %in% Top20Chars[1:4]) %>%
   group_by(season, role) %>%
   summarize(nwords = n()) %>%
@@ -333,11 +377,24 @@ dialogues.tidy %>%
   geom_col(alpha = 0.65) +
   facet_wrap(~ role, nrow = 1) +
   labs(x = "Season", y = "Number of spoken words per season",
-       title = "Homer Simpson has dominated all dialogues in every season") +
-  scale_fill_manual(name = "Character", values = palette[c(8,14,6,1)]) +
-  scale_color_manual(name = "Character", values = palette[c(8,14,6,1)]) +
-  theme(legend.position = "bottom")
+       title = "Homer Simpson has dominated all dialogues in every season",
+       caption = "source: TidyTuesday 2019|week 35, Kaggle") +
+  scale_fill_manual(name = "", values = palette[c(8,14,6,1)]) +
+  scale_color_manual(name = "", values = palette[c(8,14,6,1)])
+
+ggsave(here("2019", "week35", "Plots", "nb_lines_characters.pdf"), 
+       plot = nb_lines_characters,
+       height = 4, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "nb_lines_characters.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "nb_lines_characters.png"),
+                   verbose = FALSE)
 ```
+
+```{r, echo=FALSE, out.width=600}
+include_graphics(here("2019", "week35", "Plots", "nb_lines_characters.png"))
+```
+
 
 <img style="float: right;width: 180px;" src="Images/locations.png">
 &nbsp;
@@ -354,7 +411,7 @@ Let us have a look at the 20 most common locations, that is, the settings where 
 &nbsp;
 
 ```{r common_locations, fig.height = 7, out.width="550", out.height="550"}
-dialogues.tidy %>%
+common.locations.plot <- dialogues.tidy %>%
   count(location, sort = TRUE) %>%
   head(20) %>%
   add_column("Space" = c(rep("Indoor", 8), rep("Outdoor", 3), rep("Indoor", 3), "Outdoor",
@@ -363,12 +420,24 @@ dialogues.tidy %>%
   ggplot(aes(area = n, label = location, fill = Space, subgroup = location)) +
   geom_treemap(alpha = 0.8) +
   geom_treemap_subgroup_border(color = "black", size = 0.85) +
-  geom_treemap_text(place = "centre", size = 13,
-                    grow = FALSE, reflow = TRUE) +
-  scale_fill_manual(values = colors[3:4]) +
+  geom_treemap_text(place = "centre", size = 20,
+                    grow = FALSE, reflow = TRUE, family = "Caveat Brush") +
+  scale_fill_manual(name = "", values = colors[3:4]) +
   theme(legend.position = "bottom") +
   labs(title = "Top 20 locations",
-       subtitle = "Most dialogues take place at The Simpson home, and indoor.")
+       subtitle = "Most dialogues take place at The Simpson home, and indoor.",
+       caption = "source: TidyTuesday 2019|week 35, Kaggle")
+
+ggsave(here("2019", "week35", "Plots", "common_locations.pdf"), plot = common.locations.plot,
+       height = 7, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "common_locations.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "common_locations.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=600, out.height=600}
+include_graphics(here("2019", "week35", "Plots", "common_locations.png"))
 ```
 
 It would be interesting to investigate which characters have the most dialogue within each of these locations. Let us consider for simplicity the top six locations.
@@ -383,7 +452,7 @@ top.locations <- dialogues.tidy %>%
   pull(location)
 
 set.seed(2)
-dialogues.tidy %>%
+common_chars_by_location <- dialogues.tidy %>%
   filter(location %in% top.locations) %>%
   count(role, location, sort = TRUE) %>%
   group_by(location) %>%
@@ -395,11 +464,25 @@ dialogues.tidy %>%
   coord_flip() +
   facet_wrap(~ location, scales = "free") +
   scale_fill_manual(values = sample(palette)) +
-  labs(title = "Who speaks the most where?", y = "Number of spoken words throughout 26 seasons", x = "") +
+  labs(title = "Who speaks the most where?", y = "Number of spoken words throughout 26 seasons", 
+       x = "", caption = "source: TidyTuesday 2019|week 35, Kaggle") +
   scale_y_continuous(labels = comma) +
-  theme(panel.spacing = unit(0.5, "lines")) +
+  theme(panel.spacing = unit(0.5, "lines"),
+        strip.text = element_text(size = 12.5)) +
   scale_x_reordered()
+
+ggsave(here("2019", "week35", "Plots", "common_chars_by_location.pdf"), plot = common_chars_by_location,
+       width = 11, height = 7, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "common_chars_by_location.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "common_chars_by_location.png"),
+                   verbose = FALSE)
 ```
+
+```{r echo=FALSE, out.width=900}
+include_graphics(here("2019", "week35", "Plots", "common_chars_by_location.png"))
+```
+
 
 * **Simpson home**: it is the house of the Simpson family. Of course, the most talkative characters here are the Simpson family members, granddad included.
 
@@ -460,8 +543,24 @@ trend.views <- episodes %>%
   scatter_plot(year, us_views, ylab = "Number of US viewers", title = "TV views in the US",
                limits = c(0, 35), labels = unit_format(unit = "", scale = 1e+6, big.mark = ","))
 
-grid.arrange(trend.rating, trend.votes, trend.views, nrow = 1, ncol = 3, widths = c(0.95, 0.97, 1.08))
+plot.trends <- ggarrange(trend.rating, trend.votes, trend.views, nrow = 1, ncol = 3, 
+                            widths = c(0.95, 0.97, 1.08))
+plot.trends <- annotate_figure(plot.trends, bottom = text_grob("source: TidyTuesday 2019|week 35, Kaggle", 
+                                                               hjust = 1, x = 1, size = 12,
+                                                               family = "Caveat Brush"))
+
+ggsave(here("2019", "week35", "Plots", "loess.pdf"), plot = plot.trends,
+       width = 9, height = 3.6, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "loess.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "loess.png"),
+                   verbose = FALSE)
 ```
+
+```{r echo=FALSE, out.width=900}
+include_graphics(here("2019", "week35", "Plots", "loess.png"))
+```
+
 
 ## Seasons
 
@@ -478,7 +577,7 @@ line_plot <- function(data, x, y, xlab = "Season", ylab, title, sub,
     geom_point(shape=21, color=colors[1], fill=colors[1], size=1) +
     scale_x_continuous(breaks = seq(1, 27, 4)) +
     labs(x = xlab, y = ylab, title = title, subtitle = sub) +
-    theme(plot.subtitle=element_text(size=9))
+    theme(plot.subtitle=element_text(size=11))
     if(!is.null(breaks)){
      p <- p +
        scale_y_continuous(labels = labels, breaks = breaks, limits = limits)
@@ -511,7 +610,23 @@ plot.view <- episodes_byseason %>%
             labels = unit_format(unit = "", scale = 1e+6, big.mark = ","),
             limits = c(0, 30))
 
-grid.arrange(plot.rating, plot.vote, plot.view, nrow = 1, widths = c(0.95, 0.97, 1.08))
+plot.seasons <- ggarrange(plot.rating, plot.vote, plot.view, nrow = 1, 
+                          widths = c(0.95, 0.97, 1.08))
+plot.seasons <- annotate_figure(plot.seasons, bottom = text_grob("source: TidyTuesday 2019|week 35, Kaggle", 
+                                                                  hjust = 1, x = 1, size = 12,
+                                                                  family = "Caveat Brush"))
+
+ggsave(here("2019", "week35", "Plots", "line_plots.pdf"), plot = plot.seasons,
+       width = 9, height = 4, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "line_plots.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "line_plots.png"),
+                   verbose = FALSE)
+```
+
+
+```{r echo=FALSE, out.width=900}
+include_graphics(here("2019", "week35", "Plots", "line_plots.png"))
 ```
 
 # {-}
@@ -536,23 +651,57 @@ bi_density_plot <- function(data, mapping, palette = 4, ...){
   p
 }
 
-episodes %>%
+ggpairs <- episodes %>%
   select("IMDb rating" = rating, "IMDb votes" = votes, "TV views in US (millions)" = us_views) %>%
   ggpairs(upper = list(continuous = wrap(bi_density_plot, palette = 1, size = 0.2)),
           diag  = list(continuous = wrap("barDiag", fill = "#8d99ae", bins = 27)),
           lower = list(continuous = wrap(line_smooth, color = "black", size = 0.2))) +
-  ggtitle(label = "Pairwise variable comparisons")
+  ggtitle(label = "Pairwise variable comparisons") +
+  theme(strip.text = element_text(size = 13)) +
+  labs(caption = "source: TidyTuesday 2019|week 35, Kaggle")
+
+ggsave(here("2019", "week35", "Plots", "ggpairs.pdf"), plot = ggpairs,
+       height = 6.5, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "ggpairs.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "ggpairs.png"),
+                   verbose = FALSE)
+```
+
+```{r echo=FALSE, out.width=700}
+include_graphics(here("2019", "week35", "Plots", "ggpairs.png"))
 ```
 
 The correlation matrix of `episodes` certainly shows strong inverse relationships between the episode number and the ratings, the votes, and the views. This indicates that more recent seasons generally have lower values of those performance indicators.
 
 ```{r corrmat, fig.height = 4, out.width=600}
-episodes %>%
-  select("Episode number" = episode_id, "IMDb rating" = rating, "IMDb votes" = votes, "TV views in US" = us_views) %>%
+corrplot <- episodes %>%
+  select("Episode number" = episode_id, "IMDb rating" = rating, 
+         "IMDb votes" = votes, "TV views in US" = us_views) %>%
   cor() %>%
   ggcorrplot(type = "lower", colors = c("#6D9EC1", "white", "#E46726"), outline.col = "white",
-             legend.title = "Correlation", lab = TRUE, ggtheme = ggplot2::theme_light()) +
-  labs(title = "Correlation matrix")
+             legend.title = "Correlation\n", lab = TRUE, ggtheme = ggplot2::theme_light()) +
+  guides(fill = guide_colorbar(label = TRUE, frame.colour = "black", ticks = TRUE)) +
+  labs(title = "Correlation matrix", x = NULL, y = NULL,
+       caption = "source: TidyTuesday 2019|week 35, Kaggle") +
+  theme(text = element_text(family = "Caveat Brush"),
+        plot.title = element_text(size = 24),
+        plot.caption = element_text(size = 12),
+        axis.text = element_text(size = 10),
+        legend.title = element_text(size=15),
+        legend.text = element_text(size = 9),
+        legend.position = "bottom")
+
+ggsave(here("2019", "week35", "Plots", "corrmat.pdf"), plot = corrplot,
+       width = 5, height = 5, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "corrmat.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "corrmat.png"),
+                   verbose = FALSE)
+```
+
+```{r echo=FALSE, out.width=500}
+include_graphics(here("2019", "week35", "Plots", "corrmat.png"))
 ```
 
 
@@ -595,33 +744,136 @@ guests %>%
 
 # {-}
 
-Who are the guest stars who played themselves in multiple episodes? At the top, we find the physicist and cosmologist Stephen Hawking with 4 appearances across 30 seasons, followed by the comic-book writer Stan Lee, the filmmaker Ken Burns, and the actor Gary Coleman, all of them with 3 occurrences. The gender imbalance in the original characters is also reflected in the guest appearances, with just 5 women playing themselves twice in 30 seasons. The majority of the guest stars, however, just appears in a single episode.
+Who are the guest stars who played themselves in multiple episodes? At the top, we find the physicist and cosmologist Stephen Hawking with 4 appearances across 30 seasons, followed by the comic-book writer Stan Lee, the filmmaker Ken Burns, and the actor Gary Coleman, all of them with 3 occurrences. The gender imbalance in the original characters is also reflected in the guest appearances, with just 5 women playing themselves twice in 30 seasons. The majority of the guest stars, however, just appears in a single episode. The guest star images have been scraped from Wikipedia.
 
-```{r plot_guests, fig.height=9, fig.width=7, out.width=500}
-guests %>%
+```{r}
+scrap_image_from_wikipedia <- function(guest_name){
+  
+  if(guest_name == "\"Weird Al\" Yankovic"){
+    url <- "https://en.wikipedia.org/wiki/%22Weird_Al%22_Yankovic"
+  }else if(guest_name == "David Copperfield"){
+    url <- "https://en.wikipedia.org/wiki/David_Copperfield_(illusionist)"
+  }else if(guest_name == "Ed Begley, Jr."){
+    url <- "https://en.wikipedia.org/wiki/Ed_Begley_Jr." 
+  }else if(guest_name == "Teller"){
+    url <- "https://en.wikipedia.org/wiki/Teller_(magician)"
+  }else if(guest_name == "Thomas Pynchon"){
+    url.final <- "https://liberlist.files.wordpress.com/2013/08/a_250x375.jpg"
+    return(url.final)
+  }else{
+    guest_name_ok <- str_replace(guest_name, " ", "_")
+    url <- paste0("https://en.wikipedia.org/wiki/", guest_name_ok)
+  }
+  
+  if(guest_name == "Joe Namath"){
+    xpath <- '//*[@id="mw-content-text"]/div/table[1]/tbody/tr[1]/td/a/img'
+  }else{
+    xpath <- '//*[@id="mw-content-text"]/div/table[1]/tbody/tr[2]/td/a/img'
+  }
+  
+  url.complete <- url %>%
+    read_html() %>%
+    html_node(xpath = xpath) %>%
+    as.character()
+  
+  bits <- unlist(strsplit(url.complete, ' '))
+  list.res <- lapply(bits, function(x){str_detect(x, "src=")})
+  string_with_url <- bits[which(unlist(list.res)==T)]
+  url.image <- stri_sub(string_with_url, from = 8, to = nchar(string_with_url)-1)
+  url.final <- paste0("https://", url.image)
+  return(url.final)
+}
+
+
+df_with_urls <- guests %>%
   filter(self) %>%
   count(guest_star, sort = TRUE) %>%
   filter(n > 1) %>%
+  mutate(guest_star = ifelse(guest_star == "Neil Armstrong (archival)", "Neil Armstrong", guest_star),
+         urls = map_chr(guest_star, possibly(scrap_image_from_wikipedia, NA_character_))) %>%
   add_column(gender = c(rep("Male", 7), "Female", rep("Male", 7), rep("Female", 2), "Male",
                         "Female", rep("Male", 14), rep("Female", 1), rep("Male", 2))) %>%
-  lollipop(x = guest_star, fill.var = gender, ylab = "Number of guest appearences in 30 seasons",
-           count = FALSE, title = "Who has played themselves in multiple Simpsons episodes?")
+  mutate(row_number = row_number(),
+         img_y_coord = ifelse(row_number() %% 2 == 0, n + 0.3, n - 0.3))
+# Fix position for Stephen Hawking
+df_with_urls[df_with_urls$guest_star == "Stephen Hawking", "img_y_coord"] <- df_with_urls[df_with_urls$guest_star == "Stephen Hawking", "n"]
+
+
+vip.plot <- df_with_urls %>%
+  mutate(guest_star = fct_reorder(guest_star, -n)) %>%
+  ggplot(aes(x = guest_star, y = n, fill = gender)) +
+  geom_image(aes(x = guest_star, y = img_y_coord, image = urls), size = 0.035, asp = 1.8) +
+  ylim(0.85, 4.5) +
+  labs(x=NULL, y = "Number of guest star appearences in 30 seasons", title =  NULL) +
+  draw_image(image = here("2019", "week35", "Images", "stephenhawking.png"),
+             x = 2, y = 3.8, hjust = 0, width = 1.8) +
+  draw_image(image = here("2019", "week35", "Images", "stanlee.png"),
+             x = 4.6, y = 3.6, hjust = .5, vjust = .5, width = 1.5)  +
+  draw_image(image = here("2019", "week35", "Images", "kenburns.png"),
+             x = 0.75, y = 2.27, hjust = 0, width = 1.8) +
+  draw_image(image = here("2019", "week35", "Images", "garycoleman.png"),
+             x = 0.2, y = 3.1, hjust = 0, width = 1.7) +
+  geom_label_repel(aes(x = guest_star, y = img_y_coord, label = guest_star, fill = gender),
+                   family = "Caveat Brush", force = 1, min.segment.length = 0, 
+                   size = 4, point.padding = 0.83, 
+                   box.padding = 0.25, max.iter = 1e5, 
+                   color = "black", inherit.aes = FALSE, segment.colour = "black", 
+                   show.legend = FALSE, segment.color = "transparent") +
+  scale_fill_manual(values = rev(colors[1:2])) +
+  theme(axis.text.x = element_blank(),
+        panel.grid = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_rect(fill = "#FEE471"),
+        plot.background = element_rect(fill = "#FEE471"),
+        axis.ticks = element_blank(),
+        axis.text.y = element_text(face="bold", size = 17)) +
+  # Title and subtitle
+  annotate("text", label = "Who has played themselves in multiple Simpsons episodes?",
+           x = 8, y = 4.4, size = 13, family = "Caveat Brush", hjust = 0) +
+  annotate("text", label = "At the top, the physicist and cosmologist Stephen Hawking\nThen, the comic-book writer Stan Lee, the filmmaker Ken Burns, and the actor Gary Coleman\nOnly 5 women played themselves twice",
+           x = 8, y = 3.7, size = 7, family = "Caveat Brush", hjust = 0) +
+  labs(caption = "source: TidyTuesday 2019|week 35, Kaggle")
+
+ggsave(here("2019", "week35", "Plots", "vipplot.pdf"), plot = vip.plot,
+       width = 20, height = 11, device = cairo_pdf) # 18, 9
+
+png <- pdf_convert(here("2019", "week35", "Plots", "vipplot.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "vipplot.png"),
+                   verbose = FALSE)
+```
+
+
+```{r, echo=FALSE, out.width=800}
+include_graphics(here("2019", "week35", "Plots", "vipplot.png"))
 ```
 
 It would be interesting to see whether the number of guest appearances has changed over time. In the show's early years, most guest stars have voiced original characters, but as the show has continued, the number of those appearing as themselves has increased, especially throughout seasons 12 to 19. In more recent seasons, the gap between the two conditions seems to have become more pronounced.
 
-```{r guest_roles2, fig.height=5, fig.width=6, out.width=500}
-guests %>%
-  mutate(self = factor(self, levels = c(FALSE, TRUE), labels=c("Playing an original character", "Playing themselves"))) %>%
+```{r guest_roles_seasons, fig.height=5, fig.width=6, out.width=500}
+guest_roles_seasons <- guests %>%
+  mutate(self = factor(self, levels = c(FALSE, TRUE), 
+                       labels=c("Guest star playing an original character", "Guest star playing themselves"))) %>%
   group_by(season, self) %>%
   summarize(n = n()) %>%
   ggplot(aes(season, n, color = self)) +
   geom_line(size = 1.2) +
-  scale_color_manual(name = "Guest star", values = colors[3:4]) +
+  scale_color_manual(name = "", values = colors[3:4]) +
   scale_x_continuous(breaks = seq(1, 30, 2)) +
-  theme(legend.position = "bottom") +
+  theme(legend.text = element_text(size = 12)) +
   labs(x = "Season", y = "Number of guest appearences",
-       title = "The number of guest appearances over seasons")
+       title = "The number of guest appearances over seasons",
+       caption = "source: TidyTuesday 2019|week 35, Kaggle")
+
+ggsave(here("2019", "week35", "Plots", "guest_roles_seasons.pdf"), plot = guest_roles_seasons,
+       width = 6, height = 5, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "guest_roles_seasons.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "guest_roles_seasons.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=500}
+include_graphics(here("2019", "week35", "Plots", "guest_roles_seasons.png"))
 ```
 
 When guest stars are voicing a character, how long do they talk? Let us explore the average number of lines reserved for guest stars. The guest stars with the most lines per episode are the ones voicing a narrator or an announcer and are usually not playing themselves. The only exception of a guest star playing themselves and having a fair amount of lines has been Lady Gaga.
@@ -652,14 +904,27 @@ guest_roles %>%
 Guest stars playing themselves tend to have fewer lines than those playing an actual character on the show.
 
 ```{r histogram_roles, fig.height=4}
-guest_roles %>%
+histogram_roles <- guest_roles %>%
   mutate(self = ifelse(self, "Playing themselves", "Playing an original character")) %>%
   ggplot(aes(lines_per_episode)) +
   geom_histogram(aes(fill = self), binwidth = 2, center = 1, show.legend = FALSE) +
   facet_wrap(~ self, ncol = 2) +
   scale_fill_manual(values = colors[3:4]) +
   labs(x = "Number of lines per episode", y = "Frequency",
-       subtitle = "Most guest stars, especially those playing themselves, have relatively few lines per episode")
+       subtitle = "Most guest stars, especially those playing themselves, have relatively few lines per episode",
+       caption = "source: TidyTuesday 2019|week 35, Kaggle") +
+  theme(plot.subtitle = element_text(size = 14))
+
+ggsave(here("2019", "week35", "Plots", "histogram_roles.pdf"), plot = histogram_roles,
+       height = 4, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "histogram_roles.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "histogram_roles.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=700}
+include_graphics(here("2019", "week35", "Plots", "histogram_roles.png"))
 ```
 
 
@@ -704,13 +969,15 @@ plot_violin <- function(df, x, y, ylab, title = "", limits = NULL,
     group_by(!! x) %>%
     ggplot(aes(!! x, !! y, fill = !! x)) +
     geom_violin() +
-    scale_fill_manual(name = "Guest star", values = colors[3:4],
+    scale_fill_manual(name = "", values = colors[3:4],
                       labels = c("FALSE" = "Playing an original character", "TRUE" = "Playing themselves")) +
     scale_x_discrete(labels = c("FALSE" = "", "TRUE" = "")) +
     labs(x = "", y = ylab, title = title)  +
     stat_summary(fun.data = data_summary, geom = "pointrange", color = "black",
-                 show.legend = FALSE)
-
+                 show.legend = FALSE) +
+    theme(legend.text = element_text(size = 12, margin = margin(r = 1, unit = 'cm')),
+          legend.spacing.y = unit(1.6, 'cm'))
+#legend.key.size = unit(1.5, "cm")
   if(!is.null(breaks)){
     p <- p +
       scale_y_continuous(labels = labels, breaks = breaks, limits = limits)
@@ -734,8 +1001,25 @@ plot.guest.views <- episodes %>%
               labels = unit_format(unit = "", scale = 1e+6, big.mark = ","),
               limits = c(0, 35))
 
-ggarrange(plot.guest.ratings, plot.guest.votes, plot.guest.views, nrow = 1, common.legend = TRUE,
-             legend="bottom", widths = c(0.95, 0.97, 1.08))
+guests_violin <- ggarrange(plot.guest.ratings, plot.guest.votes, plot.guest.views, 
+                           nrow = 1, common.legend = TRUE,
+                           legend="bottom", widths = c(0.95, 0.97, 1.08)) 
+
+guests_violin <- annotate_figure(guests_violin, 
+                                 bottom = text_grob("source: TidyTuesday 2019|week 35, Kaggle", 
+                                                     hjust = 1, x = 1, size = 12,
+                                                     family = "Caveat Brush"))
+
+ggsave(here("2019", "week35", "Plots", "guests_violin.pdf"), plot = guests_violin,
+       height = 4, width = 9, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "guests_violin.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "guests_violin.png"),
+                   verbose = FALSE)
+```
+
+```{r echo=FALSE, out.width=900}
+include_graphics(here("2019", "week35", "Plots", "guests_violin.png"))
 ```
 
 
@@ -785,7 +1069,7 @@ role.specificity <- dialogues.summarized %>%
 We can use the tf-idf as a catchphrase detector. Specifically, we are looking at the characters with a fair amount of dialogues (i.e., more than 500 words), and keep one row for each character (to find one peculiar word for every role). For some characters, the peculiar word is the name of the character they usually talk to (e.g., Smithers saying 'sir' or Agnes Skinner saying 'Seymour'). In contrast, for others, it is either the word they use to introduce themselves (e.g., Troy McClure saying 'I'm Troy McClure') or recurring sounds (e.g., the Captain going 'Arrr' or Nelson 'haw').
 
 ```{r arrr, fig.height=8, out.width=600}
-role.specificity %>%
+arrr <- role.specificity %>%
   filter(total_words >= 500) %>%
   distinct(role, .keep_all = TRUE) %>%
   mutate(role_word = paste0(role, ": ", word)) %>%
@@ -794,8 +1078,21 @@ role.specificity %>%
   rename(freq = n, n = "tf_idf") %>%
   lollipop(x = role_word, fill.var = gender, count = FALSE, ylab = "TF-IDF", pos = "right",
            title = "Using TF-IDF as a catchphrase detector", labels = FALSE,
-           sub = "Top 20 characters speaking at least 500 words in 27 seasons.")
+           sub = "Top 20 characters speaking at least 500 words in 27 seasons.") +
+  labs(caption = "source: TidyTuesday 2019|week 35, Kaggle")
+
+ggsave(here("2019", "week35", "Plots", "arrr.pdf"), plot = arrr,
+       width = 9, height = 8, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "arrr.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "arrr.png"),
+                   verbose = FALSE)
 ```
+
+```{r, echo=FALSE, out.width=600}
+include_graphics(here("2019", "week35", "Plots", "arrr.png"))
+```
+
 
 ## Bigrams Analysis {.tabset .tabset-pills}
 
@@ -859,11 +1156,22 @@ bigram.graph <- bigram_counts %>%
 set.seed(1234)
 a <- grid::arrow(type = "closed", length = unit(.15, "inches"))
 
-ggraph(bigram.graph, layout = "fr") +
+networks <- ggraph(bigram.graph, layout = "fr") +
   geom_edge_link(aes(edge_alpha = n), show.legend = FALSE, arrow = a, end_cap = circle(.07, "inches")) +
   geom_node_point(color = "lightblue", size = 5) +
-  geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1, family = "Caveat Brush") +
   theme_void()
+
+ggsave(here("2019", "week35", "Plots", "networks.pdf"), plot = networks,
+       height = 9, width = 8, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "networks.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "networks.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=650}
+include_graphics(here("2019", "week35", "Plots", "networks.png"))
 ```
 
 ## Sentiment Analysis {.tabset .tabset-pills}
@@ -903,32 +1211,58 @@ bar_chart_sentiment <- function(df, x = NULL, y, z, slice = NULL, count = TRUE){
 
   df %>%
     ggplot(aes(!! y, n, fill = !! z)) +
-    geom_bar(stat = "identity") +
+    geom_bar(stat = "identity", width = 0.6) +
     coord_flip() +
     scale_fill_manual(name = "Sentiment", values = c("#f1776a", "#8bc384")) +
-    labs(x = "Word", y = "Contribution to sentiment") +
+    labs(x = "Word", y = "Contribution to sentiment",
+         caption = "source: TidyTuesday 2019|week 35, Kaggle") +
     scale_x_reordered() +
-    theme(legend.position = "bottom")
+    theme(legend.position = "bottom",
+          legend.text = element_text(size = 12))
 }
 
-simpsons_sentiments %>%
+sentiment <- simpsons_sentiments %>%
   count(sentiment, word) %>%
   ungroup() %>%
   filter(n > 400) %>%
   mutate(n = ifelse(sentiment == "negative", -n, n)) %>%
   mutate(word = reorder(word, n)) %>%
   bar_chart_sentiment(y = word, z = sentiment, count = FALSE)
+
+ggsave(here("2019", "week35", "Plots", "sentiment.pdf"), plot = sentiment,
+       height = 7, width = 7, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "sentiment.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "sentiment.png"),
+                   verbose = FALSE)
 ```
+
+```{r, echo=FALSE, out.width=550}
+include_graphics(here("2019", "week35", "Plots", "sentiment.png"))
+```
+
 
 ### Per character
 
 The words most responsible for the positive (e.g., 'love', 'nice', 'fine') and negative sentiments  (e.g., 'bad', 'wrong') do not seem to depend that much on the character.
 
 ```{r sentiment_chars, fig.height=6}
-simpsons_sentiments %>%
+sentiment_chars <- simpsons_sentiments %>%
   filter(role %in% Top20Chars[1:6]) %>%
   bar_chart_sentiment(x = role, y = word, z = sentiment, slice = c(1:12)) +
-  facet_wrap(~ role, scales = "free")
+  facet_wrap(~ role, scales = "free") +
+  theme(panel.grid = element_blank())
+
+ggsave(here("2019", "week35", "Plots", "sentiment_chars.pdf"), plot = sentiment_chars,
+       height = 6, width = 8, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "sentiment_chars.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "sentiment_chars.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=800}
+include_graphics(here("2019", "week35", "Plots", "sentiment_chars.png"))
 ```
 
 
@@ -965,18 +1299,33 @@ dialogues.tidy <- dialogues.tidy %>%
   anti_join(custom_stopwords, by = "word")
 
 set.seed(1234)
-dialogues.tidy %>%
+wordcloud_global <- dialogues.tidy %>%
   count(word, sort = TRUE) %>%
   plot_wordcloud(x = word, y = n) +
-  theme_minimal()
+  theme_minimal() +
+  labs(caption = "source: TidyTuesday 2019|week 35, Kaggle") +
+  theme(text = element_text(family = "Caveat Brush"),
+        plot.caption = element_text(size = 12))
+
+ggsave(here("2019", "week35", "Plots", "wordcloud_global.pdf"), plot = wordcloud_global,
+       height = 6, width = 6, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "wordcloud_global.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "wordcloud_global.png"),
+                   verbose = FALSE)
 ```
+
+```{r, echo=FALSE, out.width=400, out.height=600}
+include_graphics(here("2019", "week35", "Plots", "wordcloud_global.png"))
+```
+
 
 ### Per character
 
 Let us depict a separate word cloud for the most talkative characters of the show, to get an insight into their most recurrent 'themes'. The most recurrent words for each character are the ones used for interacting with the other characters on the show. As we would expect, we discover a broad theme revolving around school and friends for Bart and Lisa Simpson, around the bar for Moe, and the nuclear plant for Mr. Burns.
 
 ```{r wordcloud_chars}
-dialogues.tidy %>%
+wordcloud_chars <- dialogues.tidy %>%
   filter(role %in% Top20Chars[1:6]) %>%
   count(role, word, sort = TRUE) %>%
   group_by(role) %>%
@@ -987,7 +1336,20 @@ dialogues.tidy %>%
   ungroup() %>%
   mutate(role = reorder(role, -n, sum)) %>%
   plot_wordcloud(x = word, y = abs(prop), head = FALSE, shape = "circle", max.size = 5) +
-  facet_wrap(~role)
+  facet_wrap(~role) +
+  labs(caption = "source: TidyTuesday 2019|week 35, Kaggle")
+
+ggsave(here("2019", "week35", "Plots", "wordcloud_chars.pdf"), plot = wordcloud_chars,
+       height = 6, width = 7, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "wordcloud_chars.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "wordcloud_chars.png"),
+                   verbose = FALSE)
+```
+
+
+```{r, echo=FALSE, out.width=700}
+include_graphics(here("2019", "week35", "Plots", "wordcloud_chars.png"))
 ```
 
 ## Topic Modelling
@@ -1020,7 +1382,7 @@ The plots below shows the 10 most representative words for each topic, and the f
 simpsons_topics <- simpsons_lda %>%
   tidy(matrix = "beta")
 
-simpsons_topics %>%
+beta <- simpsons_topics %>%
   group_by(topic) %>%
   top_n(10, beta) %>%
   ungroup() %>%
@@ -1029,14 +1391,27 @@ simpsons_topics %>%
          topic = factor(topic, levels = c(1:n_topics),
                         labels = paste("Topic", 1:n_topics))) %>%
   ggplot(aes(term, beta, fill = as.factor(topic))) +
-  geom_col(show.legend = FALSE) +
+  geom_col(show.legend = FALSE, colour = "black", width = 0.7, size = 0.1) +
   facet_wrap(~topic, scales = "free", nrow = 2) +
   coord_flip() +
   scale_fill_manual(values = palette2) +
   scale_x_reordered() +
-  labs(x = "Term", y = "Per-topic-per-word probability",
-       title = "Word-Topic probabilities", subtitle = "Top 10 words for every topic")
+  labs(x = NULL, y = "Per-topic-per-word probability",
+       title = "Word-Topic probabilities", subtitle = "Top 10 words for every topic",
+       caption = "source: TidyTuesday 2019|week 35, Kaggle")
+
+ggsave(here("2019", "week35", "Plots", "beta.pdf"), plot = beta,
+       height = 8, width = 10, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "beta.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "beta.png"),
+                   verbose = FALSE)
 ```
+
+```{r, echo=FALSE, out.width=900}
+include_graphics(here("2019", "week35", "Plots", "beta.png"))
+```
+
 
 ```{r gamma, fig.height=9, out.width="700"}
 simpsons_gamma <- simpsons_lda %>%
@@ -1054,17 +1429,31 @@ top_chars_by_topic <- simpsons_classification %>%
   ungroup() %>%
   select(document)
 
-simpsons_gamma %>%
+gamma <- simpsons_gamma %>%
   inner_join(top_chars_by_topic, by = c("document")) %>%
   mutate(document = factor(document, levels = rev(top_chars_by_topic$document))) %>%
   ggplot(aes(document, topic, fill = gamma)) +
   geom_tile() +
   coord_flip() +
-  scale_y_continuous(breaks = seq(1:n_topics)) +
-  scale_fill_gradient(name = "Per-character-per-topic probability", low="white", high="blue") +
+  scale_y_continuous(breaks = seq(1:n_topics), expand = c(0.01, 0.01)) +
+  scale_x_discrete(expand = c(0, 0.05)) +
+  scale_fill_gradient(name = "Per-character-per-topic probability\n", low="white", high="blue") +
   labs(x = "", y = "Topic", title = "Character-Topic probabilities",
-       subtitle = "Top 4 characters for every topic") +
-  theme(legend.position = "bottom")
+       subtitle = "Top 4 characters for every topic",
+       caption = "source: TidyTuesday 2019|week 35, Kaggle") +
+  guides(fill = guide_colorbar(label = TRUE, frame.colour = "black", ticks = TRUE)) +
+  theme(legend.text = element_text(size = 12))
+
+ggsave(here("2019", "week35", "Plots", "gamma.pdf"), plot = gamma,
+       height = 10, width = 8.5, device = cairo_pdf)
+
+png <- pdf_convert(here("2019", "week35", "Plots", "gamma.pdf"), dpi = 400,
+                   filenames = here("2019", "week35", "Plots", "gamma.png"),
+                   verbose = FALSE)
+```
+
+```{r, echo=FALSE, out.width=700, out.height=700}
+include_graphics(here("2019", "week35", "Plots", "gamma.png"))
 ```
 
 
