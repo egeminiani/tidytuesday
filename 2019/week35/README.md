@@ -32,17 +32,16 @@ Link to the notebook on Kaggle: [https://www.kaggle.com/elenageminiani/exploring
 Following are some dataviz highlights, please refer to [`exploring-simpsons.html`](https://htmlpreview.github.io/?https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/exploring-simpsons.html) for the complete report.
 
 <p align="center">
-<img width="850" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/characters_plots-1.png">
-<img width="680" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/nb_lines_characters-1.png">
-<img width="550" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/common_locations-1.png">
-<img width="850" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/common_chars_by_location-1.png">
-<img width="680" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/loess-1.png">
-<img width="650" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/ggpairs-1.png">
-<!-- <img width="850" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/plot_guests-1.png"> -->
-<img width="600" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/arrr-1.png">
-<img width="650" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/wordcloud_chars-1.png">
-<img width="730" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/beta-1.png">
-<img width="550" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/gamma-1.png">
+<img width="950" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/vipplot.png"> 
+<img width="850" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/characters_plots.png">
+<img width="680" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/nb_lines_characters.png">
+<img width="550" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/common_locations.png">
+<img width="850" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/common_chars_by_location.png">
+<img width="680" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/loess.png">
+<img width="650" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/ggpairs.png">
+<img width="600" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/arrr.png">
+<img width="650" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/wordcloud_chars.png">
+<img width="730" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/beta.png">
+<img width="550" src="https://raw.githubusercontent.com/egeminiani/tidytuesday/master/2019/week35/Plots/gamma.png">
 </p>
-
 
